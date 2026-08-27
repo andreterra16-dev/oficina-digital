@@ -1,0 +1,11 @@
+node_modules/
+*.tmp.js
+*.tmp.cjs
+
+# Material de referência baixado de outro site (daviaxs.com.br) — usado como
+# inspiração de design em algum momento, mas não é conteúdo próprio: não deve
+# ir pro repositório público.
+uploads/
+
+# Thumbnail gerada por ferramenta de edição — não é conteúdo do site.
+.thumbnail
