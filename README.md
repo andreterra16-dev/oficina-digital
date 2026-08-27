@@ -1,8 +1,14 @@
-# André Ricco Terra
+<div align="center">
 
-**Engenheiro de IA · Desenvolvedor Web Full Stack**
+<img src="assets/logo-mark.svg" width="64" height="64" alt="AR — marca de André Ricco Terra">
 
+<h1>André Ricco Terra</h1>
+
+<b>Engenheiro de IA · Desenvolvedor Web Full Stack</b>
+<br>
 Campo Grande, MS · Brasil · Inglês avançado · Remoto ou híbrido
+
+<br><br>
 
 [![Site](https://img.shields.io/badge/site-portfolioweb--andreterra.netlify.app-1B1917?style=flat-square)](https://portfolioweb-andreterra.netlify.app/)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-André%20Ricco-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/andr%C3%A9-ricco-1674b8283/)
@@ -10,7 +16,9 @@ Campo Grande, MS · Brasil · Inglês avançado · Remoto ou híbrido
 
 <br>
 
-<img src="assets/_preview-v5.png" alt="Prévia do portfólio — Oficina Digital" width="100%">
+<img src="assets/andre-portrait-circle.png" width="200" height="200" alt="André Ricco Terra">
+
+</div>
 
 <br>
 
@@ -253,11 +261,6 @@ valores por JavaScript, o runtime reescreve o atributo `style` a cada render.
 - Toda lógica (estado, handlers, dados) fica na classe `Component`; o template só consome
   valores já prontos por nome. A fonte dessa lógica é `src/logic/component.ts`, o bloco
   `<script data-dc-script>` no `.dc.html` é gerado a partir dela, não editado à mão.
-
-### Pendências de conteúdo
-
-- Falta imagem real em todos os `<image-slot>` de projeto, hoje mostram só o placeholder.
-- Prazos e entregas das 6 fases são proposta, revisar para bater com a operação real.
 
 </details>
 
