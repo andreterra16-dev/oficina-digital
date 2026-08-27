@@ -1,0 +1,22 @@
+{
+  "name": "oficina-digital-andre-ricco",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Portfólio de página única (André Ricco Terra) — fonte TypeScript em src/, compilada para o Design Component estático (Portfolio Andre Ricco.dc.html + components/*.js).",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
+    "build": "tsx scripts/build.ts",
+    "verify": "npm run typecheck && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.18",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}
