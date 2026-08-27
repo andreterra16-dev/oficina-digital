@@ -24,7 +24,7 @@ Campo Grande, MS · Brasil · Inglês avançado · Remoto ou híbrido
 
 ## Sobre
 
-Minha base é engenharia: análise de projetos, planejamento e controle de produção (PCP) em operação industrial de corte e dobra, projetos mecânicos, elétricos e de construção civil, além de pesquisa com CNPq e PIBIC produzindo laudos e relatórios técnicos. Hoje aplico essa mesma lógica analítica ao desenvolvimento web, atuando como Desenvolvedor Web na Salomão Santos Consultoria e Tecnologia.
+Minha base é engenharia: análise de projetos, planejamento e controle de produção (PCP) em operação industrial de corte e dobra, projetos mecânicos, elétricos e de construção civil, produzindo laudos e relatórios técnicos. Hoje aplico essa mesma lógica analítica ao desenvolvimento web, atuando como Desenvolvedor Web na Salomão Santos Consultoria e Tecnologia.
 
 Construo produto de ponta a ponta: interface em React/Next.js, API em Node.js, dados em PostgreSQL e IA aplicada a problemas reais de operação, sempre modelando o problema antes de escrever a primeira linha de código.
 
@@ -164,8 +164,10 @@ scripts/
   build.ts                        compila src/ → components/*.js + injeta em Portfolio Andre Ricco.dc.html
 
 Portfolio Andre Ricco.dc.html    GERADO — template (editável) + lógica (não editar, vem de src/logic)
+index.html                       GERADO — espelho do .dc.html, é o que Netlify/GitHub Pages servem em "/"
 components/*.js                  GERADO a partir de src/components/*.ts — não editar
 support.js                       runtime do Design Component (vendorizado, não editar)
+netlify.toml                     build command + publish dir do deploy no Netlify
 assets/                          imagens do site (personagem, retratos, logos parceiras)
 uploads/                         originais enviados (fonte dos recortes)
 ```
