@@ -10,7 +10,7 @@ Campo Grande, MS · Brasil · Inglês avançado · Remoto ou híbrido
 
 <br><br>
 
-[![Site](https://img.shields.io/badge/site-portfolioweb--andreterra.netlify.app-1B1917?style=flat-square)](https://portfolioweb-andreterra.netlify.app/)
+[![Site](https://img.shields.io/badge/site-portifolioweb--andreterra.netlify.app-1B1917?style=flat-square)](https://portifolioweb-andreterra.netlify.app/)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-André%20Ricco-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/andr%C3%A9-ricco-1674b8283/)
 [![E-mail](https://img.shields.io/badge/e--mail-andre.terra16%40gmail.com-E4622E?style=flat-square)](mailto:andre.terra16@gmail.com)
 

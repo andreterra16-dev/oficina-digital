@@ -67,6 +67,33 @@ interface RenderVals {
   chip3: RefObject<HTMLDivElement>;
   railFill: RefObject<HTMLDivElement>;
   railPct: RefObject<HTMLDivElement>;
+  iaCanvasFrame: RefObject<HTMLDivElement>;
+  iaCanvasInner: RefObject<HTMLDivElement>;
+  esteiraFrame: RefObject<HTMLDivElement>;
+  esteiraInner: RefObject<HTMLDivElement>;
+}
+
+/** The "drawing size" both free-form visualizations (skill canvas, product
+ *  esteira) are laid out at — every child's percentage position and every
+ *  fixed-px button/label inside them was designed assuming a box this big.
+ *  Below this width, instead of letting the box shrink and those fixed-px
+ *  children collide/overlap (the old behavior, and the reason mobile broke),
+ *  the whole box is rendered at this exact size and then uniformly scaled
+ *  down with `transform: scale()` to fit — see `fitToFrame()`. */
+const IA_CANVAS_DESIGN = { w: 640, h: 600 };
+const ESTEIRA_DESIGN = { w: 1100, h: 452 };
+
+/** Scales `inner` (a fixed-size, `designW`×`designH` box) down to fit
+ *  `frame`'s actual rendered width, and shrinks `frame`'s own height to
+ *  match — so the frame never has empty space below a scaled-down inner box,
+ *  and never clips it either. No-ops (scale 1) whenever the frame is already
+ *  at least as wide as the design size, which covers desktop and tablet
+ *  unchanged; only narrower viewports (phones) actually scale down. */
+function fitToFrame(frame: HTMLElement | null, inner: HTMLElement | null, designW: number, designH: number): void {
+  if (!frame || !inner) return;
+  const scale = Math.min(1, frame.clientWidth / designW);
+  inner.style.transform = 'scale(' + scale + ')';
+  frame.style.height = Math.round(designH * scale) + 'px';
 }
 
 class Component extends DCLogic<ComponentProps, ComponentState> {
@@ -79,14 +106,21 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
   readonly chip3: RefObject<HTMLDivElement>;
   readonly railFill: RefObject<HTMLDivElement>;
   readonly railPct: RefObject<HTMLDivElement>;
+  readonly iaCanvasFrame: RefObject<HTMLDivElement>;
+  readonly iaCanvasInner: RefObject<HTMLDivElement>;
+  readonly esteiraFrame: RefObject<HTMLDivElement>;
+  readonly esteiraInner: RefObject<HTMLDivElement>;
 
   /** rAF handle for the throttled scroll handler — 0 when idle. */
   private _raf = 0;
+  /** rAF handle for the throttled resize handler — 0 when idle. */
+  private _resizeRaf = 0;
   // Only handlers `componentWillUnmount` needs to `removeEventListener` are
   // kept as fields; `tick` (rAF-scheduled, never removed directly) stays a
   // local closure inside `componentDidMount`.
   private _move: ((ev: MouseEvent) => void) | null = null;
   private _scroll: (() => void) | null = null;
+  private _resize: (() => void) | null = null;
 
   constructor(props: ComponentProps) {
     super(props);
@@ -97,7 +131,18 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     this.chip3 = React.createRef<HTMLDivElement>();
     this.railFill = React.createRef<HTMLDivElement>();
     this.railPct = React.createRef<HTMLDivElement>();
+    this.iaCanvasFrame = React.createRef<HTMLDivElement>();
+    this.iaCanvasInner = React.createRef<HTMLDivElement>();
+    this.esteiraFrame = React.createRef<HTMLDivElement>();
+    this.esteiraInner = React.createRef<HTMLDivElement>();
   }
+
+  /** Re-fits both free-form visualizations to their current frame width —
+   *  see `fitToFrame()`. Called on mount and on every (throttled) resize. */
+  private _fitCanvases = (): void => {
+    fitToFrame(this.iaCanvasFrame.current, this.iaCanvasInner.current, IA_CANVAS_DESIGN.w, IA_CANVAS_DESIGN.h);
+    fitToFrame(this.esteiraFrame.current, this.esteiraInner.current, ESTEIRA_DESIGN.w, ESTEIRA_DESIGN.h);
+  };
 
   override componentDidMount(): void {
     this._move = (ev: MouseEvent): void => {
@@ -124,11 +169,18 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     };
     window.addEventListener('scroll', this._scroll, { passive: true });
     tick();
+
+    this._fitCanvases();
+    this._resize = (): void => {
+      if (!this._resizeRaf) this._resizeRaf = requestAnimationFrame(() => { this._resizeRaf = 0; this._fitCanvases(); });
+    };
+    window.addEventListener('resize', this._resize, { passive: true });
   }
 
   override componentWillUnmount(): void {
     if (this._move) window.removeEventListener('mousemove', this._move);
     if (this._scroll) window.removeEventListener('scroll', this._scroll);
+    if (this._resize) window.removeEventListener('resize', this._resize);
   }
 
   pickProduct = (ev: ReactMouseEvent): void => {
@@ -281,6 +333,10 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       chip3: this.chip3,
       railFill: this.railFill,
       railPct: this.railPct,
+      iaCanvasFrame: this.iaCanvasFrame,
+      iaCanvasInner: this.iaCanvasInner,
+      esteiraFrame: this.esteiraFrame,
+      esteiraInner: this.esteiraInner,
     };
   }
 }
