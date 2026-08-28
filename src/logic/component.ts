@@ -118,7 +118,16 @@ interface RenderVals {
  *  children collide/overlap (the old behavior, and the reason mobile broke),
  *  the whole box is rendered at this exact size and then uniformly scaled
  *  down with `transform: scale()` to fit — see `fitToFrame()`. */
-const IA_CANVAS_DESIGN = { w: 640, h: 600 };
+/** `IA_CANVAS_DESIGN` grew from 640×600 to 800×660 — node *positions* are
+ *  percentages so this didn't change the tree's relative layout at all, but
+ *  every node's own box (fixed-px padding/font, unaffected by this) now has
+ *  proportionally more canvas around it. That's the fix for a real, valid
+ *  complaint that couldn't be answered by touching `skills.ts` again:
+ *  nothing was actually overlapping any more (see that file's own history
+ *  of fixes), but with the design box only 25% wider than the widest label
+ *  in it, node edges sat close enough to read as cramped regardless — a
+ *  legitimate "give it room to breathe" ask, not a collision to hunt down. */
+const IA_CANVAS_DESIGN = { w: 800, h: 660 };
 const ESTEIRA_DESIGN = { w: 1100, h: 452 };
 
 /** Scales `inner` (a fixed-size, `designW`×`designH` box) to exactly fill
