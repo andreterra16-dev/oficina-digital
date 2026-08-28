@@ -95,7 +95,7 @@ async function buildDcLogic(): Promise<string> {
 
 const DC_SCRIPT_RE = /(<script type="text\/x-dc" data-dc-script[^>]*>)[\s\S]*?(<\/script>)/;
 
-async function injectDcLogic(bundledJs: string): Promise<void> {
+async function injectDcLogic(bundledJs: string): Promise<string> {
   const htmlPath = path.join(root, 'Portfolio Andre Ricco.dc.html');
   const html = await readFile(htmlPath, 'utf8');
   if (!DC_SCRIPT_RE.test(html)) {
@@ -105,6 +105,18 @@ async function injectDcLogic(bundledJs: string): Promise<void> {
   const nextHtml = html.replace(DC_SCRIPT_RE, (_match, open: string, close: string) => open + injected + close);
   await writeFile(htmlPath, nextHtml, 'utf8');
   console.log(`  Portfolio Andre Ricco.dc.html  (<script data-dc-script> replaced, ${bundledJs.length.toLocaleString()} bytes)`);
+  return nextHtml;
+}
+
+/** Static hosts (Netlify, GitHub Pages, Vercel static, …) serve whatever sits
+ *  at `/index.html` — they don't know to look for a file named
+ *  `Portfolio Andre Ricco.dc.html` with a space and a custom extension in
+ *  it. Mirroring the exact same bytes to `index.html` is what makes the
+ *  deployed root URL actually resolve, instead of a 404. */
+async function writeIndexHtml(html: string): Promise<void> {
+  const indexPath = path.join(root, 'index.html');
+  await writeFile(indexPath, html, 'utf8');
+  console.log(`  index.html  (mirror of Portfolio Andre Ricco.dc.html, for static hosting)`);
 }
 
 async function main(): Promise<void> {
@@ -113,7 +125,8 @@ async function main(): Promise<void> {
   console.log('Bundling DC logic…');
   const bundledJs = await buildDcLogic();
   console.log('Injecting into Portfolio Andre Ricco.dc.html…');
-  await injectDcLogic(bundledJs);
+  const html = await injectDcLogic(bundledJs);
+  await writeIndexHtml(html);
   console.log('Done.');
 }
 

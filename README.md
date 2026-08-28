@@ -1,22 +1,30 @@
-# André Ricco Terra
+<div align="center">
 
-**Engenheiro de IA · Desenvolvedor Web Full Stack**
+<img src="assets/logo-mark.svg" width="64" height="64" alt="AR — marca de André Ricco Terra">
 
+<h1>André Ricco Terra</h1>
+
+<b>Engenheiro de IA · Desenvolvedor Web Full Stack</b>
+<br>
 Campo Grande, MS · Brasil · Inglês avançado · Remoto ou híbrido
 
-![Site](https://img.shields.io/badge/site-em%20breve-1B1917?style=flat-square)
+<br><br>
+
+[![Site](https://img.shields.io/badge/site-portifolioweb--andreterra.netlify.app-1B1917?style=flat-square)](https://portifolioweb-andreterra.netlify.app/)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-André%20Ricco-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/andr%C3%A9-ricco-1674b8283/)
 [![E-mail](https://img.shields.io/badge/e--mail-andre.terra16%40gmail.com-E4622E?style=flat-square)](mailto:andre.terra16@gmail.com)
 
 <br>
 
-<img src="assets/_preview-v5.png" alt="Prévia do portfólio — Oficina Digital" width="100%">
+<img src="assets/andre-portrait-circle.png" width="200" height="200" alt="André Ricco Terra">
+
+</div>
 
 <br>
 
 ## Sobre
 
-Minha base é engenharia: análise de projetos, planejamento e controle de produção (PCP) em operação industrial de corte e dobra, projetos mecânicos, elétricos e de construção civil, além de pesquisa com CNPq e PIBIC produzindo laudos e relatórios técnicos. Hoje aplico essa mesma lógica analítica ao desenvolvimento web, atuando como Desenvolvedor Web na Salomão Santos Consultoria e Tecnologia.
+Minha base é engenharia: análise de projetos, planejamento e controle de produção (PCP) em operação industrial de corte e dobra, projetos mecânicos, elétricos e de construção civil, produzindo laudos e relatórios técnicos. Hoje aplico essa mesma lógica analítica ao desenvolvimento web, atuando como Desenvolvedor Web na Salomão Santos Consultoria e Tecnologia.
 
 Construo produto de ponta a ponta: interface em React/Next.js, API em Node.js, dados em PostgreSQL e IA aplicada a problemas reais de operação, sempre modelando o problema antes de escrever a primeira linha de código.
 
@@ -156,8 +164,10 @@ scripts/
   build.ts                        compila src/ → components/*.js + injeta em Portfolio Andre Ricco.dc.html
 
 Portfolio Andre Ricco.dc.html    GERADO — template (editável) + lógica (não editar, vem de src/logic)
+index.html                       GERADO — espelho do .dc.html, é o que Netlify/GitHub Pages servem em "/"
 components/*.js                  GERADO a partir de src/components/*.ts — não editar
 support.js                       runtime do Design Component (vendorizado, não editar)
+netlify.toml                     build command + publish dir do deploy no Netlify
 assets/                          imagens do site (personagem, retratos, logos parceiras)
 uploads/                         originais enviados (fonte dos recortes)
 ```
@@ -253,11 +263,6 @@ valores por JavaScript, o runtime reescreve o atributo `style` a cada render.
 - Toda lógica (estado, handlers, dados) fica na classe `Component`; o template só consome
   valores já prontos por nome. A fonte dessa lógica é `src/logic/component.ts`, o bloco
   `<script data-dc-script>` no `.dc.html` é gerado a partir dela, não editado à mão.
-
-### Pendências de conteúdo
-
-- Falta imagem real em todos os `<image-slot>` de projeto, hoje mostram só o placeholder.
-- Prazos e entregas das 6 fases são proposta, revisar para bater com a operação real.
 
 </details>
 
