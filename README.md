@@ -143,6 +143,14 @@ sem garantia de existência — em `src/`. Um build (`npm run build`) compila
 essa fonte, minificada, de volta para o `.dc.html`/`components/*.js` que o
 navegador roda.
 
+O site é bilíngue (PT/EN) e tem dois temas de cor (ver [Idioma e tema](#idioma-e-tema)
+abaixo). Todo texto e toda cor de UI vêm de fonte única — `src/data/translations.ts`
+e os campos `I18nString` de `SKILLS`/`PRODUCT_TYPES`/`PROJECTS` para o texto,
+tokens CSS (`var(--color-…)`) para a cor — nunca hardcoded direto no template;
+um util de tipo (`Localized<T>` em `domain.ts`) resolve os campos `I18nString`
+de um tipo pro idioma ativo sem precisar de `any` em nenhum ponto de
+`renderVals()`.
+
 ### Estrutura
 
 ```
@@ -153,6 +161,9 @@ src/                             FONTE — edite aqui
   data/
     branch.ts, skills.ts,
     product-types.ts, projects.ts conteúdo do site — cores, texto, stack de cada projeto
+                                   (texto em campos I18nString: { pt, en })
+    translations.ts               todo texto de UI que não vem dos arquivos acima
+                                   (labels de seção, CTAs, chrome do modal, rodapé)
   logic/
     component.ts                  class Component extends DCLogic — estado, handlers, renderVals()
     illustrations.ts              as 3 ilustrações SVG desenhadas à mão (onboarding/valuation/pricing)
@@ -202,6 +213,9 @@ bundle específico, não a de identificadores.
 
 ### Seções do site, na ordem
 
+**Cabeçalho** (fixo, fora da numeração de etapas) — toggles de idioma (PT/EN) e tema
+(Warm Forge/Cold Steel), ver [Idioma e tema](#idioma-e-tema).
+
 1. **Hero — etapa 01 · planta.** Título "Oficina Digital", painel emoldurado com a cena da lousa.
 2. **Bancada de IA — etapa 02.** Árvore de habilidades clicável; nós e ligações vêm de
    `SKILLS` / `EDGES` na classe de lógica. Abaixo de 720px o canvas para de encolher (o que
@@ -222,6 +236,8 @@ Depois de qualquer mudança em `src/`, rode `npm run build`.
 | Quero mudar | Onde |
 | --- | --- |
 | Tipos de produto (título, explicação, exemplos, pra quem é, prazo) | `src/data/product-types.ts` |
+| Texto de UI (labels de seção, CTAs, chrome do modal, rodapé) — PT e EN | `src/data/translations.ts` |
+| Cor de tema (Warm Forge e Cold Steel) | tokens `:root` / `html[data-theme="alternate"]` no `<helmet><style>` do `.dc.html` |
 | Número/mensagens do WhatsApp | `src/logic/whatsapp.ts` (CTA dinâmico do jogo do projeto); os outros 3 CTAs de WhatsApp são estáticos, direto no `.dc.html` |
 | Habilidades da árvore e suas ligações | `src/data/skills.ts` |
 | Projetos (título, stack, problema, resultado, desafios, mapeamento, evolução, logo/ilustração, cor) | `src/data/projects.ts` |
@@ -232,17 +248,40 @@ Depois de qualquer mudança em `src/`, rode `npm run build`.
 | Cor de destaque, cursor, granularidade do reveal | painel de Tweaks (props do componente) |
 | Markup/layout/animações CSS | direto em `Portfolio Andre Ricco.dc.html` — só a região dentro de `<script data-dc-script>` é gerada |
 
+### Idioma e tema
+
+Dois toggles no cabeçalho, sempre visíveis, estado persistido em `localStorage`
+(`oficina-lang`, `oficina-theme`) e reaplicado no próximo carregamento:
+
+- **Idioma (PT/EN).** `Component.state.lang` seleciona, em `renderVals()`, qual
+  metade de cada `I18nString` (dado ou `translations.ts`) vira a `string` que o
+  template recebe. Cobertura é 100% do texto visível da página, inclusive as
+  mensagens pré-preenchidas dos CTAs de WhatsApp — nada fica hardcoded em um
+  idioma só fora de `src/data/`.
+- **Tema (Warm Forge/Cold Steel).** `Component.state.theme` vira o atributo
+  `data-theme` na tag `<html>`; todo o resto é CSS puro — ver Paleta abaixo.
+
 ### Paleta
 
-| Uso | Hex |
-| --- | --- |
-| Fundo base (cimento queimado) | `#1B1917` |
-| Fundo elevado / cartões | `#26231F` · `#2C2925` |
-| Texto principal | `#F1EADD` |
-| Texto secundário | `#A69C8C` · `#766D5F` |
-| Destaque (laranja) | `#E4622E`, hover `#F4885A` |
-| Apoio (âmbar) | `#E0A544` |
-| Apoio (aço) | `#7E8C91` |
+Toda cor de UI é uma variável CSS (`var(--color-…)`/`var(--rgb-…)` para uso em
+`rgba(...)`) declarada em `:root` (tema **Warm Forge**, o padrão) e
+redeclarada em `html[data-theme="alternate"]` (tema **Cold Steel**) — nenhuma
+cor de interface é hardcoded direto num elemento; as únicas exceções
+deliberadas são as que não devem mudar com o tema (o fundo claro atrás dos
+logos de projeto, a cor de cada projeto entregue em `PROJECTS` — a identidade
+visual do cliente, não da oficina — e sombras neutras).
+
+| Token | Warm Forge (padrão) | Cold Steel (alternativo) |
+| --- | --- | --- |
+| `--color-bg-base` | `#1B1917` (cimento queimado) | `#111827` (slate escuro) |
+| `--color-bg-elevated` / `-alt` / `-panel` | `#26231F` · `#2C2925` · `#221F1C` | `#1F2937` · `#111827` · `#0F172A` |
+| `--color-text-main` | `#F1EADD` | `#F3F4F6` |
+| `--color-text-sec` / `-muted` / `-soft` / `-body` / `-dim` | `#A69C8C` · `#766D5F` · `#CFC5B4` · `#D6CCBB` · `#5C554A` | `#9CA3AF` · `#6B7280` · `#CBD5E1` · `#D1D5DB` · `#475569` |
+| `--color-accent` / `-hover` / `-deep` | `#E4622E` · `#F4885A` · `#C9511F` (laranja) | `#06B6D4` · `#22D3EE` · `#0E7490` (ciano) |
+| `--color-support-amber` / `-steel` / `-peach` | `#E0A544` · `#7E8C91` · `#F0C39F` | `#3B82F6` · `#9CA3AF` · `#67E8F9` |
+
+A árvore de habilidades (Bancada de IA) tem seu próprio conjunto —
+`--color-branch-ia`/`-web`/`-dados`/`-core` — que segue os mesmos dois temas.
 
 Tipografia: **Archivo** (títulos e corpo) e **JetBrains Mono** (etiquetas, números, metadados),
 carregadas do Google Fonts no `<helmet>`.
@@ -274,8 +313,10 @@ valores por JavaScript, o runtime reescreve o atributo `style` a cada render.
 ### Regras de estilo do arquivo
 
 - Estilos são **inline**, por elemento. O `<style>` do `<helmet>` guarda apenas o que não pode
-  ser inline: reset do body, `@keyframes` e as regras de elemento dos componentes.
-- Sem folhas de estilo externas, sem classes utilitárias, sem tokens em CSS.
+  ser inline: reset do body, `@keyframes`, as regras de elemento dos componentes e os tokens
+  de cor (`:root` / `html[data-theme="alternate"]` — ver Paleta acima).
+- Sem folhas de estilo externas, sem classes utilitárias. Cor é sempre `var(--token)`, nunca
+  hex direto (fora das exceções deliberadas descritas em Paleta).
 - Toda lógica (estado, handlers, dados) fica na classe `Component`; o template só consome
   valores já prontos por nome. A fonte dessa lógica é `src/logic/component.ts`, o bloco
   `<script data-dc-script>` no `.dc.html` é gerado a partir dela, não editado à mão.
