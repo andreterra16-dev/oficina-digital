@@ -113,7 +113,18 @@
       cv.height = Math.round(ch * dpr);
       const off = this._off || (this._off = document.createElement('canvas'));
       off.width = cv.width; off.height = cv.height;
-      const octx = off.getContext('2d');
+      // `willReadFrequently` — this is the one canvas on the page that ever
+      // calls `getImageData` (the alpha scan just below, once per image
+      // load/resize to find which tiles aren't fully transparent). Without
+      // the hint, browsers default to GPU-backed 2D contexts and the first
+      // readback forces a GPU→CPU sync, logging a "Multiple readback
+      // operations" perf warning; this hint tells the browser up front to
+      // back this context with a CPU-side buffer instead, which is
+      // actually faster for a context whose whole purpose here is to be
+      // read from. The *visible* `<canvas>` this component paints tiles
+      // onto (`_clear`/`_drawFull`/`_animate` below) never reads pixels
+      // back — only draws — so it doesn't take this option.
+      const octx = off.getContext('2d', { willReadFrequently: true });
       if (!octx) return;
       octx.clearRect(0, 0, off.width, off.height);
       octx.imageSmoothingQuality = 'high';
