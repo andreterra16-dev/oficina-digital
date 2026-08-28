@@ -27,6 +27,7 @@
     private _onResize: (() => void) | null = null;
     private _onMove: ((e: PointerEvent) => void) | null = null;
     private _onOut: (() => void) | null = null;
+    private _onUp: ((e: PointerEvent) => void) | null = null;
     private _onVis: (() => void) | null = null;
     private _onScroll: (() => void) | null = null;
 
@@ -74,9 +75,19 @@
       window.addEventListener('resize', this._onResize);
 
       let mx = -1e4, my = -1e4, tx = -1e4, ty = -1e4;
-      this._onMove = (e: PointerEvent): void => { mx = e.clientX; my = e.clientY; };
+      // Touch input gets its own reactivity profile below (near-zero lerp lag,
+      // wider/denser hit footprint) so a finger drag reads as "cutting"
+      // through the grid instead of the softer trailing effect tuned for a
+      // mouse. `touching` also gates `_onUp`: a mouse pointerup is just a
+      // click and shouldn't clear the trail, but a touch's finger lifting is
+      // the end of the "cut" and should let the mark start healing/fading.
+      let touching = false;
+      this._onMove = (e: PointerEvent): void => { touching = e.pointerType === 'touch'; mx = e.clientX; my = e.clientY; };
       this._onOut = (): void => { mx = -1e4; my = -1e4; };
+      this._onUp = (e: PointerEvent): void => { if (e.pointerType === 'touch') this._onOut?.(); };
       window.addEventListener('pointermove', this._onMove, { passive: true });
+      window.addEventListener('pointerup', this._onUp, { passive: true });
+      window.addEventListener('pointercancel', this._onUp, { passive: true });
       document.addEventListener('pointerleave', this._onOut);
 
       let vis = true;
@@ -104,41 +115,64 @@
         last = now;
         const t = now / 1000;
 
+        // Where this frame's touch/pointer travel started from, so a fast
+        // swipe can be hit-tested along the whole segment it crossed below,
+        // not just its endpoint (see the sub-stepped loop over `steps`).
+        const ptx = tx, pty = ty;
         let moving = false;
         if (mx <= -1e4) { tx = -1e4; ty = -1e4; }
         else if (tx <= -1e4) { tx = mx; ty = my; }
         else {
           const dx = mx - tx, dy = my - ty;
           if (Math.abs(dx) > .1 || Math.abs(dy) > .1) {
-            const ease = 1 - Math.exp(-dt / .004);
+            // Touch: near-zero lag (an almost-instant snap to the finger)
+            // reads as the grid reacting to contact rather than trailing
+            // behind it, closer to the page being sliced than brushed.
+            const ease = 1 - Math.exp(-dt / (touching ? .0006 : .004));
             tx += dx * ease; ty += dy * ease; moving = true;
           } else { tx = mx; ty = my; }
         }
 
         if (moving) {
-          const r = Math.max(1, radius * (0.6 + 0.4 * inten));
+          // Touch also gets a wider, denser footprint than a mouse hover —
+          // a coarse pointer needs a bigger, more obvious reaction to read
+          // as intentional "cutting" rather than an incidental brush.
+          const touchBoost = touching ? 1.55 : 1;
+          const r = Math.max(1, radius * (0.6 + 0.4 * inten) * touchBoost);
           const rSq = r * r;
-          const impact = (density / 8) * inten;
+          const impact = (density / 8) * inten * (touching ? 1.6 : 1);
           const holdScale = Math.max(.1, hold / 10);
-          const c0 = Math.max(0, Math.floor((tx - r) / cell)), c1 = Math.min(cols - 1, Math.ceil((tx + r) / cell));
-          const r0 = Math.max(0, Math.floor((ty - r) / cell)), r1 = Math.min(rows - 1, Math.ceil((ty + r) / cell));
-          for (let c = c0; c <= c1; c++) {
-            for (let rw = r0; rw <= r1; rw++) {
-              const dx = tx - (c * cell + cell / 2), dy = ty - (rw * cell + cell / 2);
-              const dSq = dx * dx + dy * dy;
-              if (dSq >= rSq) continue;
-              const falloff = Math.pow(1 - Math.sqrt(dSq) / r, 1.5);
-              if (Math.random() >= falloff * impact) continue;
-              const idx = c * rows + rw, g = grid[idx];
-              if (!g) continue;
-              if (g.at === 0 || t - g.at > .2) {
-                g.delay = (.03 + Math.random() * .05) * holdScale;
-                g.dur = (.1 + Math.random() * .15) * holdScale;
-                g.hidden = Math.random() < .04;
+          // Sub-step the segment from last frame's position to this one —
+          // touchmove dispatches at a lower/variable rate than mouse
+          // pointermove, so a fast swipe can jump several cell-widths
+          // between frames; hit-testing only the endpoint would leave gaps
+          // in the trail instead of one continuous cut.
+          const segDx = tx - ptx, segDy = ty - pty;
+          const segLen = Math.sqrt(segDx * segDx + segDy * segDy);
+          const steps = touching ? Math.min(8, Math.max(1, Math.ceil(segLen / (cell * .6)))) : 1;
+          for (let s = 0; s < steps; s++) {
+            const k = steps === 1 ? 1 : s / (steps - 1);
+            const px = ptx + segDx * k, py = pty + segDy * k;
+            const c0 = Math.max(0, Math.floor((px - r) / cell)), c1 = Math.min(cols - 1, Math.ceil((px + r) / cell));
+            const r0 = Math.max(0, Math.floor((py - r) / cell)), r1 = Math.min(rows - 1, Math.ceil((py + r) / cell));
+            for (let c = c0; c <= c1; c++) {
+              for (let rw = r0; rw <= r1; rw++) {
+                const dx = px - (c * cell + cell / 2), dy = py - (rw * cell + cell / 2);
+                const dSq = dx * dx + dy * dy;
+                if (dSq >= rSq) continue;
+                const falloff = Math.pow(1 - Math.sqrt(dSq) / r, 1.5);
+                if (Math.random() >= falloff * impact) continue;
+                const idx = c * rows + rw, g = grid[idx];
+                if (!g) continue;
+                if (g.at === 0 || t - g.at > .2) {
+                  g.delay = (.03 + Math.random() * .05) * holdScale;
+                  g.dur = (.1 + Math.random() * .15) * holdScale;
+                  g.hidden = Math.random() < .04;
+                }
+                g.at = t;
+                if (g.char === ' ' || Math.random() < .15) g.char = POOL[(Math.random() * POOL.length) | 0];
+                active.add(idx);
               }
-              g.at = t;
-              if (g.char === ' ' || Math.random() < .15) g.char = POOL[(Math.random() * POOL.length) | 0];
-              active.add(idx);
             }
           }
         }
@@ -173,6 +207,7 @@
       if (this._sraf) cancelAnimationFrame(this._sraf);
       if (this._onResize) window.removeEventListener('resize', this._onResize);
       if (this._onMove) window.removeEventListener('pointermove', this._onMove);
+      if (this._onUp) { window.removeEventListener('pointerup', this._onUp); window.removeEventListener('pointercancel', this._onUp); }
       if (this._onScroll) window.removeEventListener('scroll', this._onScroll);
       if (this._onOut) document.removeEventListener('pointerleave', this._onOut);
       if (this._onVis) document.removeEventListener('visibilitychange', this._onVis);

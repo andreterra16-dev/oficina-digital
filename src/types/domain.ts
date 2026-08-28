@@ -72,10 +72,12 @@ export interface ProductType {
   timeframe: string;
 }
 
-/** A `ProductType` with its computed inline `style` string and esteira index. */
+/** A `ProductType` with its computed inline `style` string(s) and esteira index. */
 export interface ProductTypeWithStyle extends ProductType {
   i: number;
   style: string;
+  /** Position on the mobile "roda" (circular) layout — see `productMobileStyle`. */
+  mobileStyle: string;
 }
 
 /** The currently-selected product type, flattened for the detail panel. */

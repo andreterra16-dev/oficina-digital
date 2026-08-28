@@ -67,6 +67,39 @@ interface RenderVals {
   chip3: RefObject<HTMLDivElement>;
   railFill: RefObject<HTMLDivElement>;
   railPct: RefObject<HTMLDivElement>;
+  iaCanvasFrame: RefObject<HTMLDivElement>;
+  iaCanvasInner: RefObject<HTMLDivElement>;
+  esteiraFrame: RefObject<HTMLDivElement>;
+  esteiraInner: RefObject<HTMLDivElement>;
+}
+
+/** The "drawing size" both free-form visualizations (skill canvas, product
+ *  esteira) are laid out at — every child's percentage position and every
+ *  fixed-px button/label inside them was designed assuming a box this big.
+ *  Below this width, instead of letting the box shrink and those fixed-px
+ *  children collide/overlap (the old behavior, and the reason mobile broke),
+ *  the whole box is rendered at this exact size and then uniformly scaled
+ *  down with `transform: scale()` to fit — see `fitToFrame()`. */
+const IA_CANVAS_DESIGN = { w: 640, h: 600 };
+const ESTEIRA_DESIGN = { w: 1100, h: 452 };
+
+/** Matches the `.dc.html` `<style>`'s `@media (max-width: 720px)` — the width
+ *  below which the "Mapa de IA" switches from scaled-to-fit to scrollable,
+ *  and the esteira swaps to `#esteira-wheel`. Kept as one constant so the
+ *  JS branch and that breakpoint can't silently drift apart. */
+const MOBILE_BREAKPOINT = 720;
+
+/** Scales `inner` (a fixed-size, `designW`×`designH` box) down to fit
+ *  `frame`'s actual rendered width, and shrinks `frame`'s own height to
+ *  match — so the frame never has empty space below a scaled-down inner box,
+ *  and never clips it either. No-ops (scale 1) whenever the frame is already
+ *  at least as wide as the design size, which covers desktop and tablet
+ *  unchanged; only narrower viewports (phones) actually scale down. */
+function fitToFrame(frame: HTMLElement | null, inner: HTMLElement | null, designW: number, designH: number): void {
+  if (!frame || !inner) return;
+  const scale = Math.min(1, frame.clientWidth / designW);
+  inner.style.transform = 'scale(' + scale + ')';
+  frame.style.height = Math.round(designH * scale) + 'px';
 }
 
 class Component extends DCLogic<ComponentProps, ComponentState> {
@@ -79,14 +112,21 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
   readonly chip3: RefObject<HTMLDivElement>;
   readonly railFill: RefObject<HTMLDivElement>;
   readonly railPct: RefObject<HTMLDivElement>;
+  readonly iaCanvasFrame: RefObject<HTMLDivElement>;
+  readonly iaCanvasInner: RefObject<HTMLDivElement>;
+  readonly esteiraFrame: RefObject<HTMLDivElement>;
+  readonly esteiraInner: RefObject<HTMLDivElement>;
 
   /** rAF handle for the throttled scroll handler — 0 when idle. */
   private _raf = 0;
+  /** rAF handle for the throttled resize handler — 0 when idle. */
+  private _resizeRaf = 0;
   // Only handlers `componentWillUnmount` needs to `removeEventListener` are
   // kept as fields; `tick` (rAF-scheduled, never removed directly) stays a
   // local closure inside `componentDidMount`.
   private _move: ((ev: MouseEvent) => void) | null = null;
   private _scroll: (() => void) | null = null;
+  private _resize: (() => void) | null = null;
 
   constructor(props: ComponentProps) {
     super(props);
@@ -97,7 +137,33 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     this.chip3 = React.createRef<HTMLDivElement>();
     this.railFill = React.createRef<HTMLDivElement>();
     this.railPct = React.createRef<HTMLDivElement>();
+    this.iaCanvasFrame = React.createRef<HTMLDivElement>();
+    this.iaCanvasInner = React.createRef<HTMLDivElement>();
+    this.esteiraFrame = React.createRef<HTMLDivElement>();
+    this.esteiraInner = React.createRef<HTMLDivElement>();
   }
+
+  /** Re-fits both free-form visualizations to their current frame width —
+   *  see `fitToFrame()`. Called on mount and on every (throttled) resize.
+   *
+   *  Below `MOBILE_BREAKPOINT` the "Mapa de IA" canvas stops scaling down:
+   *  a uniform `transform:scale()` shrinks its 13px labels along with
+   *  everything else, and past a certain width they stop being legible at
+   *  all — which is the "não conseguem se compilar" (can't render legibly)
+   *  problem on a phone. Instead it renders at native size and the frame
+   *  becomes a scrollable viewport (CSS, `@media (max-width:720px)`), so
+   *  the visitor pans/scrolls the map instead of squinting at a shrunk one.
+   *  The esteira doesn't need this branch: below the same breakpoint it's
+   *  swapped out entirely for `#esteira-wheel`, a percentage-based circular
+   *  layout that never needed px-scaling to begin with. */
+  private _fitCanvases = (): void => {
+    if (window.innerWidth <= MOBILE_BREAKPOINT) {
+      if (this.iaCanvasInner.current) this.iaCanvasInner.current.style.transform = 'none';
+    } else {
+      fitToFrame(this.iaCanvasFrame.current, this.iaCanvasInner.current, IA_CANVAS_DESIGN.w, IA_CANVAS_DESIGN.h);
+    }
+    fitToFrame(this.esteiraFrame.current, this.esteiraInner.current, ESTEIRA_DESIGN.w, ESTEIRA_DESIGN.h);
+  };
 
   override componentDidMount(): void {
     this._move = (ev: MouseEvent): void => {
@@ -124,11 +190,18 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     };
     window.addEventListener('scroll', this._scroll, { passive: true });
     tick();
+
+    this._fitCanvases();
+    this._resize = (): void => {
+      if (!this._resizeRaf) this._resizeRaf = requestAnimationFrame(() => { this._resizeRaf = 0; this._fitCanvases(); });
+    };
+    window.addEventListener('resize', this._resize, { passive: true });
   }
 
   override componentWillUnmount(): void {
     if (this._move) window.removeEventListener('mousemove', this._move);
     if (this._scroll) window.removeEventListener('scroll', this._scroll);
+    if (this._resize) window.removeEventListener('resize', this._resize);
   }
 
   pickProduct = (ev: ReactMouseEvent): void => {
@@ -229,6 +302,27 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       + 'animation:popIn .55s cubic-bezier(.16,1,.3,1) both ' + (120 + i * 85) + 'ms;';
   }
 
+  /** Position + look of one stop on the mobile "roda" (circular) layout that
+   *  replaces the esteira's fixed-px conveyor below 720px (`#esteira-wheel`
+   *  in the `.dc.html`) — every product type placed at an equal angle around
+   *  a center hub instead of along the winding track, so all five stay
+   *  reachable and legible on a phone without a scale-down. Percentage-based
+   *  (unlike `productStyle`'s px track), so it needs no `fitToFrame()` pass. */
+  private productMobileStyle(i: number, total: number, active: boolean): string {
+    const angle = (i / total) * Math.PI * 2 - Math.PI / 2;
+    const rx = 38, ry = 38;
+    const x = 50 + rx * Math.cos(angle);
+    const y = 50 + ry * Math.sin(angle);
+    return 'position:absolute;left:' + x.toFixed(2) + '%;top:' + y.toFixed(2) + '%;transform:translate(-50%,-50%)' + (active ? ' scale(1.14)' : ' scale(1)') + ';'
+      + 'width:52px;height:52px;border-radius:50%;display:grid;place-items:center;cursor:pointer;font-family:inherit;'
+      + 'color:' + (active ? '#1B1917' : '#E4622E') + ';'
+      + 'background:' + (active ? 'linear-gradient(150deg,#E0A544,#E4622E)' : 'rgba(228,98,46,.10)') + ';'
+      + 'border:1px ' + (active ? 'solid rgba(228,98,46,.9)' : 'dashed rgba(228,98,46,.5)') + ';'
+      + 'box-shadow:' + (active ? '0 10px 22px -12px rgba(228,98,46,.85)' : 'none') + ';z-index:5;'
+      + 'transition:transform .4s cubic-bezier(.34,1.28,.4,1),box-shadow .3s;'
+      + 'animation:popIn .5s cubic-bezier(.16,1,.3,1) both ' + (100 + i * 70) + 'ms;';
+  }
+
   override renderVals(): RenderVals {
     const sel = SKILLS.find((s) => s.id === this.state.skill) ?? SKILLS[1] ?? SKILLS[0];
     const byId: Record<string, Skill> = {};
@@ -253,7 +347,10 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
         const from = byId[a], to = byId[b];
         return { x1: from?.x ?? 0, y1: from?.y ?? 0, x2: to?.x ?? 0, y2: to?.y ?? 0, color: to ? BRANCH[to.b].color : BRANCH.core.color };
       }),
-      productTypes: PRODUCT_TYPES.map((pt, i) => ({ ...pt, i, style: this.productStyle(pt, i, i === this.state.productIndex) })),
+      productTypes: PRODUCT_TYPES.map((pt, i) => {
+        const active = i === this.state.productIndex;
+        return { ...pt, i, style: this.productStyle(pt, i, active), mobileStyle: this.productMobileStyle(i, PRODUCT_TYPES.length, active) };
+      }),
       product,
       sel: {
         label: sel.label,
@@ -281,6 +378,10 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       chip3: this.chip3,
       railFill: this.railFill,
       railPct: this.railPct,
+      iaCanvasFrame: this.iaCanvasFrame,
+      iaCanvasInner: this.iaCanvasInner,
+      esteiraFrame: this.esteiraFrame,
+      esteiraInner: this.esteiraInner,
     };
   }
 }

@@ -16,6 +16,7 @@
         this._onResize = null;
         this._onMove = null;
         this._onOut = null;
+        this._onUp = null;
         this._onVis = null;
         this._onScroll = null;
       }
@@ -56,7 +57,9 @@
         this._onResize = rebuild;
         window.addEventListener("resize", this._onResize);
         let mx = -1e4, my = -1e4, tx = -1e4, ty = -1e4;
+        let touching = false;
         this._onMove = (e) => {
+          touching = e.pointerType === "touch";
           mx = e.clientX;
           my = e.clientY;
         };
@@ -64,7 +67,12 @@
           mx = -1e4;
           my = -1e4;
         };
+        this._onUp = (e) => {
+          if (e.pointerType === "touch") this._onOut?.();
+        };
         window.addEventListener("pointermove", this._onMove, { passive: true });
+        window.addEventListener("pointerup", this._onUp, { passive: true });
+        window.addEventListener("pointercancel", this._onUp, { passive: true });
         document.addEventListener("pointerleave", this._onOut);
         let vis = true;
         this._onVis = () => {
@@ -95,6 +103,7 @@
           const dt = Math.min(0.05, Math.max(0, (now - last) / 1e3));
           last = now;
           const t = now / 1e3;
+          const ptx = tx, pty = ty;
           let moving = false;
           if (mx <= -1e4) {
             tx = -1e4;
@@ -105,7 +114,7 @@
           } else {
             const dx = mx - tx, dy = my - ty;
             if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
-              const ease = 1 - Math.exp(-dt / 4e-3);
+              const ease = 1 - Math.exp(-dt / (touching ? 6e-4 : 4e-3));
               tx += dx * ease;
               ty += dy * ease;
               moving = true;
@@ -115,29 +124,37 @@
             }
           }
           if (moving) {
-            const r = Math.max(1, radius * (0.6 + 0.4 * inten));
+            const touchBoost = touching ? 1.55 : 1;
+            const r = Math.max(1, radius * (0.6 + 0.4 * inten) * touchBoost);
             const rSq = r * r;
-            const impact = density / 8 * inten;
+            const impact = density / 8 * inten * (touching ? 1.6 : 1);
             const holdScale = Math.max(0.1, hold / 10);
-            const c0 = Math.max(0, Math.floor((tx - r) / cell)), c1 = Math.min(cols - 1, Math.ceil((tx + r) / cell));
-            const r0 = Math.max(0, Math.floor((ty - r) / cell)), r1 = Math.min(rows - 1, Math.ceil((ty + r) / cell));
-            for (let c = c0; c <= c1; c++) {
-              for (let rw = r0; rw <= r1; rw++) {
-                const dx = tx - (c * cell + cell / 2), dy = ty - (rw * cell + cell / 2);
-                const dSq = dx * dx + dy * dy;
-                if (dSq >= rSq) continue;
-                const falloff = Math.pow(1 - Math.sqrt(dSq) / r, 1.5);
-                if (Math.random() >= falloff * impact) continue;
-                const idx = c * rows + rw, g = grid[idx];
-                if (!g) continue;
-                if (g.at === 0 || t - g.at > 0.2) {
-                  g.delay = (0.03 + Math.random() * 0.05) * holdScale;
-                  g.dur = (0.1 + Math.random() * 0.15) * holdScale;
-                  g.hidden = Math.random() < 0.04;
+            const segDx = tx - ptx, segDy = ty - pty;
+            const segLen = Math.sqrt(segDx * segDx + segDy * segDy);
+            const steps = touching ? Math.min(8, Math.max(1, Math.ceil(segLen / (cell * 0.6)))) : 1;
+            for (let s = 0; s < steps; s++) {
+              const k = steps === 1 ? 1 : s / (steps - 1);
+              const px = ptx + segDx * k, py = pty + segDy * k;
+              const c0 = Math.max(0, Math.floor((px - r) / cell)), c1 = Math.min(cols - 1, Math.ceil((px + r) / cell));
+              const r0 = Math.max(0, Math.floor((py - r) / cell)), r1 = Math.min(rows - 1, Math.ceil((py + r) / cell));
+              for (let c = c0; c <= c1; c++) {
+                for (let rw = r0; rw <= r1; rw++) {
+                  const dx = px - (c * cell + cell / 2), dy = py - (rw * cell + cell / 2);
+                  const dSq = dx * dx + dy * dy;
+                  if (dSq >= rSq) continue;
+                  const falloff = Math.pow(1 - Math.sqrt(dSq) / r, 1.5);
+                  if (Math.random() >= falloff * impact) continue;
+                  const idx = c * rows + rw, g = grid[idx];
+                  if (!g) continue;
+                  if (g.at === 0 || t - g.at > 0.2) {
+                    g.delay = (0.03 + Math.random() * 0.05) * holdScale;
+                    g.dur = (0.1 + Math.random() * 0.15) * holdScale;
+                    g.hidden = Math.random() < 0.04;
+                  }
+                  g.at = t;
+                  if (g.char === " " || Math.random() < 0.15) g.char = POOL[Math.random() * POOL.length | 0];
+                  active.add(idx);
                 }
-                g.at = t;
-                if (g.char === " " || Math.random() < 0.15) g.char = POOL[Math.random() * POOL.length | 0];
-                active.add(idx);
               }
             }
           }
@@ -179,6 +196,10 @@
         if (this._sraf) cancelAnimationFrame(this._sraf);
         if (this._onResize) window.removeEventListener("resize", this._onResize);
         if (this._onMove) window.removeEventListener("pointermove", this._onMove);
+        if (this._onUp) {
+          window.removeEventListener("pointerup", this._onUp);
+          window.removeEventListener("pointercancel", this._onUp);
+        }
         if (this._onScroll) window.removeEventListener("scroll", this._onScroll);
         if (this._onOut) document.removeEventListener("pointerleave", this._onOut);
         if (this._onVis) document.removeEventListener("visibilitychange", this._onVis);
