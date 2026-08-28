@@ -29,6 +29,7 @@
     private _onUp: ((e: PointerEvent) => void) | null = null;
     private _onVis: (() => void) | null = null;
     private _onScroll: (() => void) | null = null;
+    private _themeObserver: MutationObserver | null = null;
 
     connectedCallback(): void {
       if (this._up) return;
@@ -50,10 +51,41 @@
       const radius = parseFloat(this.getAttribute('radius') || '') || 54;
       const density = parseFloat(this.getAttribute('density') || '') || 20;
       const hold = parseFloat(this.getAttribute('hold') || '') || 12;
-      const boxColor = this.getAttribute('box-color') || '#E4622E';
-      const textColor = this.getAttribute('text-color') || '#F1EADD';
       const fadeAttr = this.getAttribute('fade');
       const fadeTo = fadeAttr !== null ? parseFloat(fadeAttr) : 0.34;
+
+      // box-color/text-color arrive as raw attribute strings — since the
+      // theme rework they're `var(--color-accent)` etc., not a literal hex.
+      // Canvas 2D's `fillStyle` has no idea what a CSS custom property is
+      // (it isn't a `<color>` per the canvas spec) — assigning it silently
+      // no-ops, leaving fillStyle at its default black, which is how the
+      // cursor lost its color entirely. Resolve through a probe element
+      // instead: setting `.style.color` on a real, connected DOM node and
+      // reading it back via `getComputedStyle` lets the browser do the
+      // var()-resolution + cascade lookup canvas can't, honoring whichever
+      // theme (`data-theme`) is active when this mounts.
+      const resolveColor = (value: string): string => {
+        if (!value.includes('var(')) return value;
+        const probe = document.createElement('span');
+        probe.style.color = value;
+        this.appendChild(probe);
+        const resolved = getComputedStyle(probe).color;
+        probe.remove();
+        return resolved || value;
+      };
+      const boxColorAttr = this.getAttribute('box-color') || '#E4622E';
+      const textColorAttr = this.getAttribute('text-color') || '#F1EADD';
+      let boxColor = resolveColor(boxColorAttr);
+      let textColor = resolveColor(textColorAttr);
+      // Re-resolve on a theme switch (`toggleTheme` in component.ts flips
+      // `data-theme` on <html>) so the trail's color follows Warm
+      // Forge/Cold Steel instead of staying frozen at whatever it resolved
+      // to on mount.
+      this._themeObserver = new MutationObserver(() => {
+        boxColor = resolveColor(boxColorAttr);
+        textColor = resolveColor(textColorAttr);
+      });
+      this._themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
       let w = 1, h = 1, cols = 1, rows = 1;
       let grid: Cell[] = [];
@@ -210,6 +242,7 @@
       if (this._onScroll) window.removeEventListener('scroll', this._onScroll);
       if (this._onOut) document.removeEventListener('pointerleave', this._onOut);
       if (this._onVis) document.removeEventListener('visibilitychange', this._onVis);
+      if (this._themeObserver) this._themeObserver.disconnect();
       this._up = false;
     }
   }

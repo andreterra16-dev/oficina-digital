@@ -302,6 +302,15 @@ avança, para não competir com o conteúdo. Pausa com a aba oculta. Toque tem u
 reação próprio (raio/densidade maiores, quase sem atraso de suavização, sub-passos ao longo do
 arrasto) — a intenção é que o dedo pareça "cortar" a página, não só arrastar um cursor de mouse.
 
+`box-color`/`text-color` recebem `var(--color-accent)` etc. (ver Paleta), não hex direto — mas o
+`fillStyle` de um canvas 2D **não entende custom property de CSS**, só um `<color>` resolvido;
+atribuir a string literal `"var(--color-accent)"` a ele falha silenciosamente (fica no preto
+padrão, o motivo de o cursor um dia ter "perdido a cor"). O componente resolve isso sozinho:
+aplica o valor a um elemento-sonda real no DOM (`probe.style.color = value`) e lê o resultado já
+processado via `getComputedStyle`, e reobserva `data-theme` na `<html>` pra re-resolver quando o
+tema muda. Se um dia trocar esses atributos por hex direto o probe vira no-op — sem risco, só
+desnecessário.
+
 **`<image-slot id placeholder src fit>`** — área de imagem que o usuário preenche arrastando o
 arquivo; a escolha persiste entre recarregamentos. Cada slot precisa de um `id` distinto. Aceita
 um `src` inicial (usado pelas logos oficiais dos projetos), o usuário ainda pode arrastar por
