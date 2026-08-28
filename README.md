@@ -32,6 +32,10 @@ Este repositório é a fonte do meu portfólio pessoal — a página em si (**Of
 
 ## Stack
 
+O que uso no dia a dia entregando projetos de clientes (ver **Projetos** abaixo) — não
+necessariamente o que roda *este* site: a arquitetura própria da Oficina Digital está
+detalhada em **Documentação técnica**, mais adiante.
+
 <p>
   <img src="https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React">
   <img src="https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js">
@@ -168,6 +172,7 @@ src/                             FONTE — edite aqui
     component.ts                  class Component extends DCLogic — estado, handlers, renderVals()
     illustrations.ts              as 3 ilustrações SVG desenhadas à mão (onboarding/valuation/pricing)
     logo-mark.ts                  a logo "AR" do site, como elemento React reutilizável
+    favicon.ts                    a mesma marca "AR", como favicon por tema (troca ao vivo com o toggle)
     likes.ts                      persistência do botão de like em localStorage
     whatsapp.ts                   número + gerador de link wa.me com mensagem por tipo de projeto
   components/
@@ -218,14 +223,17 @@ bundle específico, não a de identificadores.
 
 1. **Hero — etapa 01 · planta.** Título "Oficina Digital", painel emoldurado com a cena da lousa.
 2. **Bancada de IA — etapa 02.** Árvore de habilidades clicável; nós e ligações vêm de
-   `SKILLS` / `EDGES` na classe de lógica. Abaixo de 720px o canvas para de encolher (o que
-   deixava os rótulos ilegíveis) e vira um viewport arrastável/rolável em tamanho nativo.
+   `SKILLS` / `EDGES` na classe de lógica, desenhados num canvas de 800×660 escalado
+   (`transform: scale()`) pra preencher o frame em qualquer largura/zoom de desktop. Abaixo de
+   720px o canvas dá lugar a `#ia-mobile-groups`: um acordeão por ramo (IA/Web/Dados), lista
+   vertical nativa ao toque — sem drag, sem canvas.
 3. **O jogo do seu projeto — etapa 03.** Esteira com os 5 tipos de produto que André constrói
    (`PRODUCT_TYPES`) com painel de detalhe e um CTA de WhatsApp com mensagem pré-preenchida.
-   Abaixo de 720px a esteira dá lugar a um navegador ‹/› + fileira de chips, pensado pra tela
-   vertical em vez de uma faixa horizontal encolhida. Abaixo, os cartões de projeto entregues,
-   cada um com modal individual (problema, resultado, desafios técnicos, estratégia de
-   mapeamento e evolução).
+   Abaixo de 720px a esteira dá lugar a `#esteira-carousel`: um carrossel de cards deslizável
+   (`scroll-snap` nativo) com indicador de bolinhas, cada card já autocontido (explicação,
+   exemplos, pra quem é, prazo, CTA). Abaixo, os cartões de projeto entregues, cada um com
+   modal individual (problema, resultado, desafios técnicos, estratégia de mapeamento e
+   evolução).
 4. **Sobre — etapa 04 · acabamento.** Texto de posicionamento e números.
 5. **Contato — entrega.** E-mail, LinkedIn, rodapé.
 
@@ -243,6 +251,7 @@ Depois de qualquer mudança em `src/`, rode `npm run build`.
 | Projetos (título, stack, problema, resultado, desafios, mapeamento, evolução, logo/ilustração, cor) | `src/data/projects.ts` |
 | Ilustrações SVG dos projetos sem logo oficial | `src/logic/illustrations.ts` |
 | A logo "AR" do site (header, rodapé, selo, modal) | `src/logic/logo-mark.ts` |
+| O favicon (ícone da aba, um por tema) | `src/logic/favicon.ts` — e o `<link rel="icon">` estático no `<helmet>`, que é só o que aparece antes do JS montar |
 | Estado, handlers de clique, `renderVals()` | `src/logic/component.ts` |
 | Imagens dos projetos | arraste sobre os `<image-slot id="proj-1…5">` na própria página — não passa por build, persiste direto no navegador |
 | Cor de destaque, cursor, granularidade do reveal | painel de Tweaks (props do componente) |
@@ -301,6 +310,16 @@ toda a página. A intensidade é cheia sobre a hero e cai para o fator `fade` co
 avança, para não competir com o conteúdo. Pausa com a aba oculta. Toque tem um perfil de
 reação próprio (raio/densidade maiores, quase sem atraso de suavização, sub-passos ao longo do
 arrasto) — a intenção é que o dedo pareça "cortar" a página, não só arrastar um cursor de mouse.
+
+No mobile, o gatilho é invertido: assim que o navegador reconhece um arrasto como rolagem, ele
+assume o gesto nativamente e para de disparar `pointermove` (às vezes cancela o ponteiro de
+vez) — então reagir só a movimento deixaria o efeito quase mudo durante o próprio scroll, que é
+a única interação de toque que a página tem. `touchstart`/`touchmove` continuam reportando o
+ponto de contato independente disso, e o próprio evento `scroll` (que continua disparando
+durante o arraste) re-aciona o efeito nesse ponto a cada tick, só enquanto o dedo está de fato
+na tela. Um arrasto rápido demais, ou uma segunda tela de contato simultânea, entra num
+cooldown breve (120ms) antes de voltar a reagir — sem isso, o efeito tentava estampar todo o
+trajeto num único frame e lia como travamento em vez de rastro.
 
 `box-color`/`text-color` recebem `var(--color-accent)` etc. (ver Paleta), não hex direto — mas o
 `fillStyle` de um canvas 2D **não entende custom property de CSS**, só um `<color>` resolvido;

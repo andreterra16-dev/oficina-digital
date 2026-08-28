@@ -5,6 +5,7 @@ import { PROJECTS } from '../data/projects';
 import { SKILLS, EDGES } from '../data/skills';
 import { illustration } from './illustrations';
 import { loadLikes, saveLikes } from './likes';
+import { updateFavicon } from './favicon';
 import { logoMark } from './logo-mark';
 import { whatsAppLink } from './whatsapp';
 import { TRANSLATIONS } from '../data/translations';
@@ -228,6 +229,7 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
   override componentDidMount(): void {
     // Apply initial theme to documentElement
     document.documentElement.setAttribute('data-theme', this.state.theme);
+    updateFavicon(this.state.theme);
 
     this._move = (ev: MouseEvent): void => {
       const dx = (ev.clientX / window.innerWidth - 0.5), dy = (ev.clientY / window.innerHeight - 0.5);
@@ -282,6 +284,7 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
     } catch {}
     document.documentElement.setAttribute('data-theme', nextTheme);
+    updateFavicon(nextTheme);
   };
 
   /** Handles clicks on the desktop esteira's fixed stops

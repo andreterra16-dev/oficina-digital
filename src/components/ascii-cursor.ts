@@ -142,12 +142,25 @@
       // by move events the browser may have stopped sending.
       let touchX = -1e4, touchY = -1e4;
       let fingerDown = false;
+      // Seconds-since-epoch (same clock as `t` in `frame()` below) until
+      // which the effect holds off reacting — the "atraso" (delay) asked
+      // for: a genuine second contact point (`e.touches.length > 1`, e.g.
+      // an accidental second finger, or the OS briefly reporting a stray
+      // touch) used to snap `touchX`/`touchY` straight to wherever that
+      // second touch landed, reading as the trail teleporting rather than
+      // tracking one finger. Now a multi-touch moment just starts a short
+      // cooldown and is otherwise ignored — position stays put, nothing
+      // reacts, until it's back down to one finger and the cooldown clears.
+      let glitchUntil = 0;
+      const GLITCH_DELAY_S = 0.12;
       this._onTouchStart = (e: TouchEvent): void => {
         fingerDown = true;
+        if (e.touches.length > 1) { glitchUntil = performance.now() / 1000 + GLITCH_DELAY_S; return; }
         const t = e.touches[0];
         if (t) { touchX = t.clientX; touchY = t.clientY; touching = true; mx = touchX; my = touchY; }
       };
       this._onTouchMove = (e: TouchEvent): void => {
+        if (e.touches.length > 1) { glitchUntil = performance.now() / 1000 + GLITCH_DELAY_S; return; }
         const t = e.touches[0];
         if (t) { touchX = t.clientX; touchY = t.clientY; }
       };
@@ -210,14 +223,6 @@
         }
 
         if (moving) {
-          // Touch also gets a wider, denser footprint than a mouse hover —
-          // a coarse pointer needs a bigger, more obvious reaction to read
-          // as intentional "cutting" rather than an incidental brush.
-          const touchBoost = touching ? 1.55 : 1;
-          const r = Math.max(1, radius * (0.6 + 0.4 * inten) * touchBoost);
-          const rSq = r * r;
-          const impact = (density / 8) * inten * (touching ? 1.6 : 1);
-          const holdScale = Math.max(.1, hold / 10);
           // Sub-step the segment from last frame's position to this one —
           // touchmove dispatches at a lower/variable rate than mouse
           // pointermove, so a fast swipe can jump several cell-widths
@@ -225,29 +230,51 @@
           // in the trail instead of one continuous cut.
           const segDx = tx - ptx, segDy = ty - pty;
           const segLen = Math.sqrt(segDx * segDx + segDy * segDy);
-          const steps = touching ? Math.min(8, Math.max(1, Math.ceil(segLen / (cell * .6)))) : 1;
-          for (let s = 0; s < steps; s++) {
-            const k = steps === 1 ? 1 : s / (steps - 1);
-            const px = ptx + segDx * k, py = pty + segDy * k;
-            const c0 = Math.max(0, Math.floor((px - r) / cell)), c1 = Math.min(cols - 1, Math.ceil((px + r) / cell));
-            const r0 = Math.max(0, Math.floor((py - r) / cell)), r1 = Math.min(rows - 1, Math.ceil((py + r) / cell));
-            for (let c = c0; c <= c1; c++) {
-              for (let rw = r0; rw <= r1; rw++) {
-                const dx = px - (c * cell + cell / 2), dy = py - (rw * cell + cell / 2);
-                const dSq = dx * dx + dy * dy;
-                if (dSq >= rSq) continue;
-                const falloff = Math.pow(1 - Math.sqrt(dSq) / r, 1.5);
-                if (Math.random() >= falloff * impact) continue;
-                const idx = c * rows + rw, g = grid[idx];
-                if (!g) continue;
-                if (g.at === 0 || t - g.at > .2) {
-                  g.delay = (.03 + Math.random() * .05) * holdScale;
-                  g.dur = (.1 + Math.random() * .15) * holdScale;
-                  g.hidden = Math.random() < .04;
+          // A swipe fast enough to cross a large chunk of the screen in a
+          // single frame reads as glitchy no matter how many sub-steps fill
+          // it in — a burst of boxes popping across a huge span at once,
+          // not a trail. Past `FAST_SWIPE_PX_S`, treat it the same as a
+          // stray multi-touch: hold off reacting for `GLITCH_DELAY_S`
+          // instead of stamping the whole span, then resume normally once
+          // the finger settles back to a sane pace.
+          const FAST_SWIPE_PX_S = 5500;
+          if (touching && dt > 0 && segLen / dt > FAST_SWIPE_PX_S) glitchUntil = t + GLITCH_DELAY_S;
+          // Rendering of already-active cells below still has to run every
+          // frame regardless (so an existing mark keeps fading normally) —
+          // only the *new*-hit stamping this delay guards skips ahead.
+          if (t >= glitchUntil) {
+            // Touch also gets a wider, denser footprint than a mouse hover —
+            // a coarse pointer needs a bigger, more obvious reaction to read
+            // as intentional "cutting" rather than an incidental brush.
+            const touchBoost = touching ? 1.55 : 1;
+            const r = Math.max(1, radius * (0.6 + 0.4 * inten) * touchBoost);
+            const rSq = r * r;
+            const impact = (density / 8) * inten * (touching ? 1.6 : 1);
+            const holdScale = Math.max(.1, hold / 10);
+            const steps = touching ? Math.min(8, Math.max(1, Math.ceil(segLen / (cell * .6)))) : 1;
+            for (let s = 0; s < steps; s++) {
+              const k = steps === 1 ? 1 : s / (steps - 1);
+              const px = ptx + segDx * k, py = pty + segDy * k;
+              const c0 = Math.max(0, Math.floor((px - r) / cell)), c1 = Math.min(cols - 1, Math.ceil((px + r) / cell));
+              const r0 = Math.max(0, Math.floor((py - r) / cell)), r1 = Math.min(rows - 1, Math.ceil((py + r) / cell));
+              for (let c = c0; c <= c1; c++) {
+                for (let rw = r0; rw <= r1; rw++) {
+                  const dx = px - (c * cell + cell / 2), dy = py - (rw * cell + cell / 2);
+                  const dSq = dx * dx + dy * dy;
+                  if (dSq >= rSq) continue;
+                  const falloff = Math.pow(1 - Math.sqrt(dSq) / r, 1.5);
+                  if (Math.random() >= falloff * impact) continue;
+                  const idx = c * rows + rw, g = grid[idx];
+                  if (!g) continue;
+                  if (g.at === 0 || t - g.at > .2) {
+                    g.delay = (.03 + Math.random() * .05) * holdScale;
+                    g.dur = (.1 + Math.random() * .15) * holdScale;
+                    g.hidden = Math.random() < .04;
+                  }
+                  g.at = t;
+                  if (g.char === ' ' || Math.random() < .15) g.char = POOL.charAt((Math.random() * POOL.length) | 0);
+                  active.add(idx);
                 }
-                g.at = t;
-                if (g.char === ' ' || Math.random() < .15) g.char = POOL.charAt((Math.random() * POOL.length) | 0);
-                active.add(idx);
               }
             }
           }
