@@ -96,6 +96,7 @@ interface RenderVals {
   railFill: RefObject<HTMLDivElement>;
   railPct: RefObject<HTMLDivElement>;
   headerName: RefObject<HTMLSpanElement>;
+  iaLinksSvg: RefObject<SVGSVGElement>;
   iaCanvasFrame: RefObject<HTMLDivElement>;
   iaCanvasInner: RefObject<HTMLDivElement>;
   esteiraFrame: RefObject<HTMLDivElement>;
@@ -164,6 +165,21 @@ function fitToFrame(frame: HTMLElement | null, inner: HTMLElement | null, design
   frame.style.height = Math.round(designH * scale) + 'px';
 }
 
+/** The skill-tree connector lines' endpoints — one per `EDGES` pair, in that
+ *  same order (so callers can zip the result against `EDGES`/the rendered
+ *  `<line>` elements by index). Shared by `renderVals()` (for `l.color`,
+ *  still template-bound — a color string was never the problem) and
+ *  `_applyLinkCoords()` (which sets the real `x1`/`y1`/`x2`/`y2` — see that
+ *  method's doc comment for why those aren't template-bound any more). */
+function computeLinkCoords(): Array<{ x1: number; y1: number; x2: number; y2: number }> {
+  const byId: Record<string, Skill> = {};
+  SKILLS.forEach((s) => { byId[s.id] = s; });
+  return EDGES.map(([a, b]) => {
+    const from = byId[a], to = byId[b];
+    return { x1: from?.x ?? 0, y1: from?.y ?? 0, x2: to?.x ?? 0, y2: to?.y ?? 0 };
+  });
+}
+
 class Component extends DCLogic<ComponentProps, ComponentState> {
   override state: ComponentState = {
     skill: 'ia',
@@ -186,6 +202,8 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
    *  so the name isn't shown twice on screen at once; fades in once the
    *  visitor scrolls far enough that the hero's version has scrolled out. */
   readonly headerName: RefObject<HTMLSpanElement>;
+  /** The skill-tree connector lines' `<svg>` — see `_applyLinkCoords()`. */
+  readonly iaLinksSvg: RefObject<SVGSVGElement>;
   readonly iaCanvasFrame: RefObject<HTMLDivElement>;
   readonly iaCanvasInner: RefObject<HTMLDivElement>;
   readonly esteiraFrame: RefObject<HTMLDivElement>;
@@ -212,6 +230,7 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     this.railFill = React.createRef<HTMLDivElement>();
     this.railPct = React.createRef<HTMLDivElement>();
     this.headerName = React.createRef<HTMLSpanElement>();
+    this.iaLinksSvg = React.createRef<SVGSVGElement>();
     this.iaCanvasFrame = React.createRef<HTMLDivElement>();
     this.iaCanvasInner = React.createRef<HTMLDivElement>();
     this.esteiraFrame = React.createRef<HTMLDivElement>();
@@ -273,6 +292,74 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       if (!this._resizeRaf) this._resizeRaf = requestAnimationFrame(() => { this._resizeRaf = 0; this._fitCanvases(); });
     };
     window.addEventListener('resize', this._resize, { passive: true });
+
+    this._applyLinkCoords();
+    this._applyCoverSrc();
+  }
+
+  // DCLogic's componentDidUpdate only forwards prevProps, not prevState
+  // (see dc-runtime.d.ts) — nothing here to diff against, so this just
+  // re-applies unconditionally on every update. Cheap and self-limiting:
+  // _applyCoverSrc() only touches the DOM when a src is actually stale,
+  // and the grid's 5 covers stabilize after the first call. What actually
+  // needs this on every update is the modal's own `<image-slot>` — it
+  // only mounts a fresh one each time a project opens, which didn't exist
+  // yet for componentDidMount to have caught.
+  override componentDidUpdate(): void {
+    this._applyCoverSrc();
+  }
+
+  /** Sets the skill-tree connector lines' real `x1`/`y1`/`x2`/`y2` —
+   *  imperatively, once, here, instead of templating them in the `.dc.html`
+   *  (`x1="{{ l.x1 }}"` etc.). The raw, uncompiled `.dc.html` markup *is*
+   *  this page's actual first paint — this runtime replaces it with the
+   *  real render only once its own JS (which we don't control; it's
+   *  `support.js`, vendored) has run a moment later. In that brief window
+   *  the browser's native SVG parser sees the literal, un-interpolated
+   *  `"{{ l.x1 }}"` string sitting in a numeric geometry attribute and
+   *  logs a console error for it — self-correcting (nothing stays visibly
+   *  broken once this runs) but real console noise on a page whose whole
+   *  pitch is engineering rigor, and reproducible on the actual deployed
+   *  site, not just a local-serving artifact. Static `x1="0"` etc. in the
+   *  markup is always a valid attribute value, so the native parser never
+   *  has anything to reject; `stroke` stays template-bound since a color
+   *  string was never the problem — only numeric geometry attributes get
+   *  validated this eagerly. Positions never change after mount (node
+   *  layout is fixed), so this runs once and is done. */
+  private _applyLinkCoords(): void {
+    const svg = this.iaLinksSvg.current;
+    if (!svg) return;
+    const coords = computeLinkCoords();
+    const lines = svg.querySelectorAll('line');
+    lines.forEach((line, i) => {
+      const c = coords[i];
+      if (!c) return;
+      line.setAttribute('x1', String(c.x1));
+      line.setAttribute('y1', String(c.y1));
+      line.setAttribute('x2', String(c.x2));
+      line.setAttribute('y2', String(c.y2));
+    });
+  }
+
+  /** Sets each project cover's real `src` — imperatively, via
+   *  `data-cover-for="<project id>"` (an inert attribute nothing else
+   *  reads), instead of templating `src="{{ p.logo }}"` directly on
+   *  `<image-slot>`. Same root cause as `_applyLinkCoords()` above, but for
+   *  a real custom element instead of a native SVG attribute: `<image-slot>`
+   *  observes `src` and reacts (fetches/displays it) the moment it
+   *  upgrades — which, in that same brief pre-render window, means it
+   *  upgrades holding the literal, un-interpolated `"{{ p.logo }}"` text
+   *  and fires a request for that literal string as a URL (a guaranteed
+   *  404, visible in the Network tab on the deployed site). `<image-slot>`
+   *  already has a fully supported empty state (its `placeholder` text) for
+   *  "no `src` yet", so leaving it unset until this runs is not a hack. */
+  private _applyCoverSrc(): void {
+    for (const p of PROJECTS) {
+      if (!p.logo) continue;
+      document.querySelectorAll('[data-cover-for="' + p.id + '"]').forEach((el) => {
+        if (el.getAttribute('src') !== p.logo) el.setAttribute('src', p.logo as string);
+      });
+    }
   }
 
   override componentWillUnmount(): void {
@@ -525,10 +612,14 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
         style: this.nodeStyle(n, n.id === this.state.skill),
       })),
       mobileSkillGroups: this.mobileSkillGroups(lang),
-      links: EDGES.map(([a, b]) => {
-        const from = byId[a], to = byId[b];
-        return { x1: from?.x ?? 0, y1: from?.y ?? 0, x2: to?.x ?? 0, y2: to?.y ?? 0, color: to ? BRANCH[to.b].color : BRANCH.core.color };
-      }),
+      links: (() => {
+        const coords = computeLinkCoords();
+        return EDGES.map(([, b], i) => {
+          const to = byId[b];
+          const c = coords[i] ?? { x1: 0, y1: 0, x2: 0, y2: 0 };
+          return { ...c, color: to ? BRANCH[to.b].color : BRANCH.core.color };
+        });
+      })(),
       productTypes: PRODUCT_TYPES.map((pt, i) => {
         const active = i === this.state.productIndex;
         return {
@@ -578,6 +669,7 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       railFill: this.railFill,
       railPct: this.railPct,
       headerName: this.headerName,
+      iaLinksSvg: this.iaLinksSvg,
       iaCanvasFrame: this.iaCanvasFrame,
       iaCanvasInner: this.iaCanvasInner,
       esteiraFrame: this.esteiraFrame,

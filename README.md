@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo-mark-duotone.svg" width="64" height="64" alt="AR — marca de André Ricco Terra, metade Warm Forge (laranja) metade Cold Steel (azul), os dois temas do site">
+<img src="assets/logo-mark-duotone.svg" width="64" height="64" alt="Marca AR de André Ricco Terra, metade Warm Forge (laranja) metade Cold Steel (azul), os dois temas do site">
 
 <h1>André Ricco Terra</h1>
 
@@ -28,11 +28,11 @@ Minha base é engenharia: análise de projetos, planejamento e controle de produ
 
 Construo produto de ponta a ponta: interface em React/Next.js, API em Node.js, dados em PostgreSQL e IA aplicada a problemas reais de operação, sempre modelando o problema antes de escrever a primeira linha de código.
 
-Este repositório é a fonte do meu portfólio pessoal — a página em si (**Oficina Digital**) e a documentação técnica de como ela foi construída.
+Este repositório reúne meu portfólio pessoal: a página em si (**Oficina Digital**) e a documentação técnica de como ela foi construída.
 
 ## Stack
 
-O que uso no dia a dia entregando projetos de clientes (ver **Projetos** abaixo) — não
+O que uso no dia a dia entregando projetos de clientes (ver **Projetos** abaixo), não
 necessariamente o que roda *este* site: a arquitetura própria da Oficina Digital está
 detalhada em **Documentação técnica**, mais adiante.
 
@@ -55,7 +55,7 @@ detalhada em **Documentação técnica**, mais adiante.
 
 ## Projetos
 
-Cinco projetos reais, entregues para clientes de consultoria e negócios próprios — do zero ao deploy.
+Cinco projetos reais, entregues para clientes de consultoria e negócios próprios, do zero ao deploy.
 
 <table>
 <tr>

@@ -230,6 +230,19 @@ interface ShadowRootInitWithClonable extends ShadowRootInit {
 
   function load(): Promise<void> {
     if (loadP) return loadP;
+    // Diverges from the omelette starter here: outside that editor there
+    // is no sidecar to read at all — this component is explicitly
+    // read-only there (see the top-of-file comment) — so fetching a path
+    // that can only ever 404 on the plain static deploy this repo ships
+    // (portfolioweb-andreterra.netlify.app) is pure console/network noise
+    // for zero benefit, on every page load, for every visitor. Gate it on
+    // the same `window.omelette.writeFile` presence `editable` below
+    // already uses to detect that environment — real inside the editor
+    // (unchanged behavior there), skipped everywhere else.
+    if (!(window.omelette && window.omelette.writeFile)) {
+      loadP = Promise.resolve().then(() => { loaded = true; subs.forEach((fn) => fn()); });
+      return loadP;
+    }
     loadP = fetch(STATE_FILE)
       .then((r) => (r.ok ? r.json() : null))
       .then((j: unknown) => {
