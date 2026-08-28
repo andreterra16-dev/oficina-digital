@@ -35,7 +35,7 @@ export const PROJECTS: readonly Project[] = [
   },
   {
     id: 'onboarding', order: '03', slot: 'proj-3', badge: { pt: 'Projeto 03', en: 'Project 03' }, accent: false,
-    logo: null, illustration: 'onboarding',
+    logo: './assets/screenshot-onboarding.png', illustration: null, logoIsScreenshot: true,
     color: '#9B7FEF', colorRgb: '155,127,239', baseLikes: 17,
     title: 'Onboarding de Clientes Premium (IA)', subtitle: { pt: 'Wizard estratégico para briefing de agentes de IA sob medida', en: 'Strategic wizard for custom AI agent briefing' },
     placeholder: { pt: 'Telas do wizard de onboarding', en: 'Onboarding wizard screens' },
@@ -50,7 +50,7 @@ export const PROJECTS: readonly Project[] = [
   },
   {
     id: 'valuation', order: '04', slot: 'proj-4', badge: { pt: 'Projeto 04', en: 'Project 04' }, accent: false,
-    logo: null, illustration: 'valuation',
+    logo: './assets/screenshot-valuation.png', illustration: null, logoIsScreenshot: true,
     color: '#3FA66B', colorRgb: '63,166,107', baseLikes: 29,
     title: 'Calculadora de Valuation', subtitle: { pt: 'Avaliação empresarial 100% client-side', en: '100% client-side business valuation' },
     placeholder: { pt: 'Dashboard de valuation (16:9)', en: 'Valuation dashboard (16:9)' },
@@ -65,7 +65,7 @@ export const PROJECTS: readonly Project[] = [
   },
   {
     id: 'pricing', order: '05', slot: 'proj-5', badge: { pt: 'Projeto 05', en: 'Project 05' }, accent: false,
-    logo: null, illustration: 'pricing',
+    logo: './assets/screenshot-pricing.png', illustration: null, logoIsScreenshot: true,
     color: '#E4A23C', colorRgb: '228,162,60', baseLikes: 22,
     title: 'Calculadora de Precificação', subtitle: { pt: 'CMV e preço sugerido para sorveterias e negócios de sobremesa', en: 'CMV and suggested pricing for ice cream parlors and dessert businesses' },
     placeholder: { pt: 'Telas da calculadora de precificação', en: 'Pricing calculator screens' },

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="120" height="120">
+  <!-- README-only variant of logo-mark.svg: half Warm Forge orange, half
+       Cold Steel cyan/blue, diagonal split with a soft blend band in the
+       middle — the site's own two themes side by side in one mark, same
+       diagonal direction (top-left to bottom-right) the live logo's own
+       gradient already uses. The live site's logoMark() stays one theme
+       at a time (see logo-mark.ts); this duotone exists only as a GitHub
+       README badge. -->
+  <defs>
+    <linearGradient id="arLogoGradDuotone" x1="2" y1="2" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F4885A"/>
+      <stop offset="40%" stop-color="#E0A544"/>
+      <stop offset="60%" stop-color="#22D3EE"/>
+      <stop offset="100%" stop-color="#60A5FA"/>
+    </linearGradient>
+    <filter id="arLogoShadowDuotone" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="1.4" stdDeviation="1.6" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <g filter="url(#arLogoShadowDuotone)">
+    <rect x="1" y="1" width="38" height="38" rx="9" fill="url(#arLogoGradDuotone)"/>
+    <rect x="1" y="1" width="38" height="38" rx="9" fill="none" stroke="rgba(20,19,23,.22)"/>
+    <path d="M6.5 9.5 L6.5 13.5 M6.5 9.5 L10.5 9.5" fill="none" stroke="#141317" stroke-opacity=".6" stroke-width="1.4" stroke-linecap="round"/>
+    <path d="M33.5 30.5 L33.5 26.5 M33.5 30.5 L29.5 30.5" fill="none" stroke="#141317" stroke-opacity=".6" stroke-width="1.4" stroke-linecap="round"/>
+    <text x="20" y="26.5" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-weight="700" font-size="15" letter-spacing="-.5" fill="#141317">AR</text>
+  </g>
+</svg>

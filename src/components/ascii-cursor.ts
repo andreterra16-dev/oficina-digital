@@ -33,6 +33,8 @@
     private _onTouchMove: ((e: TouchEvent) => void) | null = null;
     private _onTouchEnd: (() => void) | null = null;
     private _themeObserver: MutationObserver | null = null;
+    private _mobileMql: MediaQueryList | null = null;
+    private _onMobileChange: ((e: MediaQueryListEvent) => void) | null = null;
 
     connectedCallback(): void {
       if (this._up) return;
@@ -107,6 +109,21 @@
       rebuild();
       this._onResize = rebuild;
       window.addEventListener('resize', this._onResize);
+
+      // Same breakpoint the rest of the page treats as "mobile" (see the
+      // `.dc.html` `@media (max-width: 720px)` block). Below it, the touch
+      // footprint tuned further down (`touchBoost`/`impact`) gets scaled
+      // back down toward an actual fingertip instead of the much bigger,
+      // more dramatic "cutting" splash that profile was tuned for — on a
+      // phone, where the same drag is also how the visitor scrolls, that
+      // bigger splash read as glitchy/imprecise and fought the scroll
+      // instead of just decorating it. A tablet or touch-laptop above this
+      // width keeps the original, bolder touch profile.
+      const mobileMql = window.matchMedia('(max-width: 720px)');
+      let isMobile = mobileMql.matches;
+      this._mobileMql = mobileMql;
+      this._onMobileChange = (e: MediaQueryListEvent): void => { isMobile = e.matches; };
+      mobileMql.addEventListener('change', this._onMobileChange);
 
       let mx = -1e4, my = -1e4, tx = -1e4, ty = -1e4;
       // Touch input gets its own reactivity profile below (near-zero lerp lag,
@@ -243,13 +260,17 @@
           // frame regardless (so an existing mark keeps fading normally) —
           // only the *new*-hit stamping this delay guards skips ahead.
           if (t >= glitchUntil) {
-            // Touch also gets a wider, denser footprint than a mouse hover —
-            // a coarse pointer needs a bigger, more obvious reaction to read
-            // as intentional "cutting" rather than an incidental brush.
-            const touchBoost = touching ? 1.55 : 1;
+            // Touch gets a wider, denser footprint than a mouse hover on a
+            // large screen — a coarse pointer needs a bigger, more obvious
+            // reaction to read as intentional "cutting" rather than an
+            // incidental brush. On an actual phone (`isMobile`) that same
+            // boost is dialed back down toward the size of the finger
+            // that's making it instead — big enough to read as a
+            // reaction, not so big it feels like it's fighting the scroll.
+            const touchBoost = touching ? (isMobile ? 0.62 : 1.55) : 1;
             const r = Math.max(1, radius * (0.6 + 0.4 * inten) * touchBoost);
             const rSq = r * r;
-            const impact = (density / 8) * inten * (touching ? 1.6 : 1);
+            const impact = (density / 8) * inten * (touching ? (isMobile ? 1 : 1.6) : 1);
             const holdScale = Math.max(.1, hold / 10);
             const steps = touching ? Math.min(8, Math.max(1, Math.ceil(segLen / (cell * .6)))) : 1;
             for (let s = 0; s < steps; s++) {
@@ -318,6 +339,7 @@
       if (this._onOut) document.removeEventListener('pointerleave', this._onOut);
       if (this._onVis) document.removeEventListener('visibilitychange', this._onVis);
       if (this._themeObserver) this._themeObserver.disconnect();
+      if (this._mobileMql && this._onMobileChange) this._mobileMql.removeEventListener('change', this._onMobileChange);
       this._up = false;
     }
   }

@@ -207,6 +207,12 @@ interface ProjectBase {
 interface ProjectWithLogo extends ProjectBase {
   logo: string;
   illustration: null;
+  /** `true` when `logo` is actually a real product screenshot, not a
+   *  transparent-background brand mark — the card/modal cover then fills
+   *  edge-to-edge (`fit="cover"`, no plaque) instead of the light plaque
+   *  background + `fit="contain"` a transparent logo needs. Omitted (falsy)
+   *  for an actual partner logo. */
+  logoIsScreenshot?: boolean;
 }
 
 /** A project with no official logo — falls back to a hand-drawn illustration instead. */
@@ -243,6 +249,13 @@ export function projectHasIllustration(p: Project): p is ProjectWithIllustration
  * narrows after enrichment.
  */
 export type EnrichedProject = Localized<Project> & {
+  /** Which cover treatment the card/modal should render — computed once
+   *  here instead of as a compound `{{ p.logo && !p.logoIsScreenshot }}`
+   *  in the template, since the `.dc.html` template compiler's `{{ }}`
+   *  expressions support equality/negation but not `&&`/`||` (see
+   *  `resolve()` in support.js) — a single discriminant `sc-if value="{{
+   *  p.coverKind === 'screenshot' }}"` sidesteps that entirely. */
+  coverKind: 'logo' | 'screenshot' | 'illustration';
   liked: boolean;
   likeIcon: '♥' | '♡';
   likeCount: number;

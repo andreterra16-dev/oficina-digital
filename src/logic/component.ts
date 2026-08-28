@@ -95,6 +95,7 @@ interface RenderVals {
   chip3: RefObject<HTMLDivElement>;
   railFill: RefObject<HTMLDivElement>;
   railPct: RefObject<HTMLDivElement>;
+  headerName: RefObject<HTMLSpanElement>;
   iaCanvasFrame: RefObject<HTMLDivElement>;
   iaCanvasInner: RefObject<HTMLDivElement>;
   esteiraFrame: RefObject<HTMLDivElement>;
@@ -180,6 +181,11 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
   readonly chip3: RefObject<HTMLDivElement>;
   readonly railFill: RefObject<HTMLDivElement>;
   readonly railPct: RefObject<HTMLDivElement>;
+  /** The "André Ricco Terra · " lead-in inside the header wordmark — hidden
+   *  while the hero's own big name heading is in view (see `tick()` below)
+   *  so the name isn't shown twice on screen at once; fades in once the
+   *  visitor scrolls far enough that the hero's version has scrolled out. */
+  readonly headerName: RefObject<HTMLSpanElement>;
   readonly iaCanvasFrame: RefObject<HTMLDivElement>;
   readonly iaCanvasInner: RefObject<HTMLDivElement>;
   readonly esteiraFrame: RefObject<HTMLDivElement>;
@@ -205,6 +211,7 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     this.chip3 = React.createRef<HTMLDivElement>();
     this.railFill = React.createRef<HTMLDivElement>();
     this.railPct = React.createRef<HTMLDivElement>();
+    this.headerName = React.createRef<HTMLSpanElement>();
     this.iaCanvasFrame = React.createRef<HTMLDivElement>();
     this.iaCanvasInner = React.createRef<HTMLDivElement>();
     this.esteiraFrame = React.createRef<HTMLDivElement>();
@@ -249,6 +256,11 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       const pct = Math.max(0, Math.min(100, Math.round((window.scrollY / max) * 100)));
       if (this.railFill.current) this.railFill.current.style.height = pct + '%';
       if (this.railPct.current) this.railPct.current.textContent = String(pct).padStart(2, '0') + '%';
+      // Same "past the hero" threshold ascii-cursor.ts already fades its
+      // own intensity at (vh * .85) — reusing it means the header name
+      // fades in right around when the hero's big name heading has
+      // scrolled out, not some independently-tuned point.
+      if (this.headerName.current) this.headerName.current.style.opacity = window.scrollY > window.innerHeight * .85 ? '1' : '0';
     };
     this._scroll = (): void => {
       if (!this._raf) this._raf = requestAnimationFrame(tick);
@@ -366,6 +378,7 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       challenges: p.challenges[lang],
       evolution: p.evolution[lang],
       mapping: p.mapping[lang],
+      coverKind: projectHasIllustration(p) ? 'illustration' : p.logoIsScreenshot ? 'screenshot' : 'logo',
       liked,
       likeIcon: liked ? '♥' : '♡',
       likeCount: p.baseLikes + (liked ? 1 : 0),
@@ -545,10 +558,10 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
             ? (lang === 'pt' ? 'sólido' : 'solid')
             : (lang === 'pt' ? 'em evolução' : 'evolving'),
       },
-      logoMarkHeader: logoMark(36, true),
-      logoMarkFooter: logoMark(26, false),
-      logoMarkStamp: logoMark(30, false),
-      logoMarkModal: logoMark(22, false),
+      logoMarkHeader: logoMark(36, true, this.state.theme),
+      logoMarkFooter: logoMark(26, false, this.state.theme),
+      logoMarkStamp: logoMark(30, false, this.state.theme),
+      logoMarkModal: logoMark(22, false, this.state.theme),
       projects: PROJECTS.map((p) => this.enrichProject(p, lang)),
       activeProject: activeProjectSource ? this.enrichProject(activeProjectSource, lang) : null,
       openProject: this.openProject,
@@ -564,6 +577,7 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       chip3: this.chip3,
       railFill: this.railFill,
       railPct: this.railPct,
+      headerName: this.headerName,
       iaCanvasFrame: this.iaCanvasFrame,
       iaCanvasInner: this.iaCanvasInner,
       esteiraFrame: this.esteiraFrame,

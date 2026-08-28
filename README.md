@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo-mark.svg" width="64" height="64" alt="AR — marca de André Ricco Terra">
+<img src="assets/logo-mark-duotone.svg" width="64" height="64" alt="AR — marca de André Ricco Terra, metade Warm Forge (laranja) metade Cold Steel (azul), os dois temas do site">
 
 <h1>André Ricco Terra</h1>
 
@@ -10,7 +10,7 @@ Campo Grande, MS · Brasil · Inglês avançado · Remoto ou híbrido
 
 <br><br>
 
-[![Site](https://img.shields.io/badge/site-portifolioweb--andreterra.netlify.app-1B1917?style=flat-square)](https://portifolioweb-andreterra.netlify.app/)
+[![Site](https://img.shields.io/badge/site-portifolioweb--andreterra.netlify.app-1B1917?style=flat-square)](https://portfolioweb-andreterra.netlify.app/)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-André%20Ricco-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/andr%C3%A9-ricco-1674b8283/)
 [![E-mail](https://img.shields.io/badge/e--mail-andre.terra16%40gmail.com-E4622E?style=flat-square)](mailto:andre.terra16@gmail.com)
 
@@ -171,7 +171,7 @@ src/                             FONTE — edite aqui
   logic/
     component.ts                  class Component extends DCLogic — estado, handlers, renderVals()
     illustrations.ts              as 3 ilustrações SVG desenhadas à mão (onboarding/valuation/pricing)
-    logo-mark.ts                  a logo "AR" do site, como elemento React reutilizável
+    logo-mark.ts                  a logo "AR" do site, como elemento React reutilizável (segue o tema, como o favicon)
     favicon.ts                    a mesma marca "AR", como favicon por tema (troca ao vivo com o toggle)
     likes.ts                      persistência do botão de like em localStorage
     whatsapp.ts                   número + gerador de link wa.me com mensagem por tipo de projeto
@@ -248,12 +248,13 @@ Depois de qualquer mudança em `src/`, rode `npm run build`.
 | Cor de tema (Warm Forge e Cold Steel) | tokens `:root` / `html[data-theme="alternate"]` no `<helmet><style>` do `.dc.html` |
 | Número/mensagens do WhatsApp | `src/logic/whatsapp.ts` (CTA dinâmico do jogo do projeto); os outros 3 CTAs de WhatsApp são estáticos, direto no `.dc.html` |
 | Habilidades da árvore e suas ligações | `src/data/skills.ts` |
-| Projetos (título, stack, problema, resultado, desafios, mapeamento, evolução, logo/ilustração, cor) | `src/data/projects.ts` |
-| Ilustrações SVG dos projetos sem logo oficial | `src/logic/illustrations.ts` |
+| Projetos (título, stack, problema, resultado, desafios, mapeamento, evolução, cor) | `src/data/projects.ts` |
+| Capa de um projeto — logo oficial, screenshot real, ou ilustração | `src/data/projects.ts`: `logo` (path) para uma logo transparente ou `logo` + `logoIsScreenshot: true` para uma captura de tela real; `illustration` (uma `IllustrationKey`) só quando não há nenhuma das duas ainda. Ver `coverKind` em `component.ts` e "Componentes" abaixo |
+| Ilustrações SVG usadas como capa provisória (nenhum logo/screenshot ainda) | `src/logic/illustrations.ts` |
 | A logo "AR" do site (header, rodapé, selo, modal) | `src/logic/logo-mark.ts` |
 | O favicon (ícone da aba, um por tema) | `src/logic/favicon.ts` — e o `<link rel="icon">` estático no `<helmet>`, que é só o que aparece antes do JS montar |
 | Estado, handlers de clique, `renderVals()` | `src/logic/component.ts` |
-| Imagens dos projetos | arraste sobre os `<image-slot id="proj-1…5">` na própria página — não passa por build, persiste direto no navegador |
+| Imagens dos projetos (permanente, o que o visitante público vê) | arquivo em `assets/` + campo `logo` correspondente em `src/data/projects.ts`, então `npm run build` |
 | Cor de destaque, cursor, granularidade do reveal | painel de Tweaks (props do componente) |
 | Markup/layout/animações CSS | direto em `Portfolio Andre Ricco.dc.html` — só a região dentro de `<script data-dc-script>` é gerada |
 
@@ -321,6 +322,12 @@ na tela. Um arrasto rápido demais, ou uma segunda tela de contato simultânea, 
 cooldown breve (120ms) antes de voltar a reagir — sem isso, o efeito tentava estampar todo o
 trajeto num único frame e lia como travamento em vez de rastro.
 
+O perfil de toque em si (raio/densidade ampliados, ver `touchBoost`/`impact` no componente) foi
+calibrado pensando num touchscreen grande — na largura real de um celular (`@media (max-width:
+720px)`, mesmo corte do resto do site) ele é escalado de volta pra algo do tamanho do próprio
+dedo: reação visível o bastante pra confirmar o toque, sem virar uma mancha grande demais que
+disputa espaço com o scroll que o visitante está tentando fazer.
+
 `box-color`/`text-color` recebem `var(--color-accent)` etc. (ver Paleta), não hex direto — mas o
 `fillStyle` de um canvas 2D **não entende custom property de CSS**, só um `<color>` resolvido;
 atribuir a string literal `"var(--color-accent)"` a ele falha silenciosamente (fica no preto
@@ -330,10 +337,13 @@ processado via `getComputedStyle`, e reobserva `data-theme` na `<html>` pra re-r
 tema muda. Se um dia trocar esses atributos por hex direto o probe vira no-op — sem risco, só
 desnecessário.
 
-**`<image-slot id placeholder src fit>`** — área de imagem que o usuário preenche arrastando o
-arquivo; a escolha persiste entre recarregamentos. Cada slot precisa de um `id` distinto. Aceita
-um `src` inicial (usado pelas logos oficiais dos projetos), o usuário ainda pode arrastar por
-cima para substituir.
+**`<image-slot id placeholder src fit>`** — área de imagem preenchível por arrasto, com um `src`
+inicial opcional (usado por toda capa de projeto — logo, screenshot ou nenhum dos dois ainda).
+O arrasto-e-solta só persiste dentro do ambiente de edição da Design Component (o drop grava num
+sidecar local que o runtime lê de volta); no site publicado, fora desse ambiente, o slot é
+somente leitura — arrastar uma imagem nele não faz nada para quem visita. Pra trocar uma imagem
+permanentemente (o que qualquer visitante vê), o caminho é o de cima: arquivo em `assets/` +
+campo `logo` em `projects.ts` + build. Cada slot precisa de um `id` distinto.
 
 Os três recebem posição e display por regra de elemento no `<helmet><style>`, não defina esses
 valores por JavaScript, o runtime reescreve o atributo `style` a cada render.
