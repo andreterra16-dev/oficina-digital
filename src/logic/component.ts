@@ -7,6 +7,7 @@ import { illustration } from './illustrations';
 import { loadLikes, saveLikes } from './likes';
 import { logoMark } from './logo-mark';
 import { whatsAppLink } from './whatsapp';
+import { TRANSLATIONS } from '../data/translations';
 import type {
   ComponentProps,
   ComponentState,
@@ -34,6 +35,27 @@ import type { MouseEvent as ReactMouseEvent, ReactElement, RefObject, SyntheticE
 function closestFromTarget(ev: SyntheticEvent, selector: string): HTMLElement | null {
   const target = ev.target as HTMLElement | null;
   return target ? target.closest<HTMLElement>(selector) : null;
+}
+
+const LANG_STORAGE_KEY = 'oficina-lang';
+const THEME_STORAGE_KEY = 'oficina-theme';
+
+function loadLang(): 'pt' | 'en' {
+  try {
+    const val = localStorage.getItem(LANG_STORAGE_KEY);
+    return val === 'en' ? 'en' : 'pt';
+  } catch {
+    return 'pt';
+  }
+}
+
+function loadTheme(): 'default' | 'alternate' {
+  try {
+    const val = localStorage.getItem(THEME_STORAGE_KEY);
+    return val === 'alternate' ? 'alternate' : 'default';
+  } catch {
+    return 'default';
+  }
 }
 
 /** The flat object `renderVals()` hands to the `.dc.html` template — every
@@ -71,6 +93,17 @@ interface RenderVals {
   iaCanvasInner: RefObject<HTMLDivElement>;
   esteiraFrame: RefObject<HTMLDivElement>;
   esteiraInner: RefObject<HTMLDivElement>;
+  // i18n and theme props
+  t: Record<string, string>;
+  currentLangLabel: string;
+  currentThemeIcon: string;
+  toggleLang: () => void;
+  toggleTheme: () => void;
+  /** wa.me deep links pre-filled with the active language's message —
+   *  computed here (not left as static hrefs in the `.dc.html`) so they
+   *  actually change with `lang`, same as `product.waLink` already did. */
+  contactWaLink: string;
+  slotWaLink: string;
 }
 
 /** The "drawing size" both free-form visualizations (skill canvas, product
@@ -103,7 +136,14 @@ function fitToFrame(frame: HTMLElement | null, inner: HTMLElement | null, design
 }
 
 class Component extends DCLogic<ComponentProps, ComponentState> {
-  override state: ComponentState = { skill: 'ia', productIndex: 0, project: null, likes: loadLikes() };
+  override state: ComponentState = {
+    skill: 'ia',
+    productIndex: 0,
+    project: null,
+    likes: loadLikes(),
+    lang: loadLang(),
+    theme: loadTheme(),
+  };
 
   readonly heroChar: RefObject<HTMLDivElement>;
   readonly avatar: RefObject<HTMLDivElement>;
@@ -166,6 +206,9 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
   };
 
   override componentDidMount(): void {
+    // Apply initial theme to documentElement
+    document.documentElement.setAttribute('data-theme', this.state.theme);
+
     this._move = (ev: MouseEvent): void => {
       const dx = (ev.clientX / window.innerWidth - 0.5), dy = (ev.clientY / window.innerHeight - 0.5);
       if (this.heroChar.current) {
@@ -203,6 +246,23 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     if (this._scroll) window.removeEventListener('scroll', this._scroll);
     if (this._resize) window.removeEventListener('resize', this._resize);
   }
+
+  toggleLang = (): void => {
+    const nextLang = this.state.lang === 'pt' ? 'en' : 'pt';
+    this.setState({ lang: nextLang });
+    try {
+      localStorage.setItem(LANG_STORAGE_KEY, nextLang);
+    } catch {}
+  };
+
+  toggleTheme = (): void => {
+    const nextTheme = this.state.theme === 'default' ? 'alternate' : 'default';
+    this.setState({ theme: nextTheme });
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    } catch {}
+    document.documentElement.setAttribute('data-theme', nextTheme);
+  };
 
   /** Handles clicks on both product-type pickers: the desktop esteira's
    *  fixed stops (`[data-product-type]`) and the mobile navigator's
@@ -279,21 +339,29 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
   };
 
   /** Adds this render's computed fields (like state, inline styles, illustration element) to a `Project`. */
-  private enrichProject(p: Project): EnrichedProject {
+  private enrichProject(p: Project, lang: 'pt' | 'en'): EnrichedProject {
     const liked = !!this.state.likes[p.id];
     return {
       ...p,
+      badge: p.badge[lang],
+      subtitle: p.subtitle[lang],
+      placeholder: p.placeholder[lang],
+      problem: p.problem[lang],
+      result: p.result[lang],
+      challenges: p.challenges[lang],
+      evolution: p.evolution[lang],
+      mapping: p.mapping[lang],
       liked,
       likeIcon: liked ? '♥' : '♡',
       likeCount: p.baseLikes + (liked ? 1 : 0),
       illustrationEl: projectHasIllustration(p) ? illustration(p.illustration, p.color) : null,
       cardStyle: 'animation:rise .9s cubic-bezier(.16,1,.3,1) both;transition:transform .35s cubic-bezier(.16,1,.3,1),border-color .4s,box-shadow .4s;cursor:pointer;border-radius:6px;'
         + 'border:1px solid rgba(' + p.colorRgb + ',.5);box-shadow:0 0 0 1px rgba(' + p.colorRgb + ',.14),0 26px 60px -40px rgba(' + p.colorRgb + ',.55);'
-        + 'background:#26231F;overflow:hidden;display:flex;flex-direction:column',
+        + 'background:var(--color-bg-elevated);overflow:hidden;display:flex;flex-direction:column',
       likeBtnStyle: 'display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:20px;cursor:pointer;font-family:\'JetBrains Mono\',monospace;font-size:11.5px;transition:transform .2s,background .25s,border-color .25s;'
         + (liked
           ? 'background:rgba(' + p.colorRgb + ',.22);border:1px solid rgba(' + p.colorRgb + ',.85);color:' + p.color + ';'
-          : 'background:rgba(241,234,221,.05);border:1px solid rgba(241,234,221,.18);color:#A69C8C;'),
+          : 'background:rgba(var(--rgb-text-main),.05);border:1px solid rgba(var(--rgb-text-main),.18);color:var(--color-text-sec);'),
     };
   }
 
@@ -302,8 +370,8 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     const big = n.t <= 1;
     return 'position:absolute;left:' + n.x + '%;top:' + n.y + '%;transform:translate(-50%,-50%);'
       + 'padding:' + (big ? '12px 18px' : '9px 14px') + ';border-radius:3px;cursor:pointer;text-align:left;white-space:nowrap;'
-      + 'font-family:inherit;color:' + (active ? '#1B1917' : '#F1EADD') + ';'
-      + 'background:' + (active ? b.color : (big ? 'rgba(' + b.rgb + ',.14)' : 'rgba(33,31,28,.94)')) + ';'
+      + 'font-family:inherit;color:' + (active ? 'var(--color-bg-base)' : 'var(--color-text-main)') + ';'
+      + 'background:' + (active ? b.color : (big ? 'rgba(' + b.rgb + ',.14)' : 'var(--color-bg-panel)')) + ';'
       + 'border:1px solid rgba(' + b.rgb + (active ? ',1)' : (big ? ',.5)' : ',.3)')) + ';'
       + 'box-shadow:' + (active ? '0 10px 26px -12px rgba(' + b.rgb + ',.8)' : 'none') + ';'
       + 'transition:background .3s,color .3s,box-shadow .3s,transform .3s cubic-bezier(.16,1,.3,1);'
@@ -313,10 +381,10 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
   private productStyle(pt: ProductType, i: number, active: boolean): string {
     return 'position:absolute;left:' + pt.x + '%;top:' + pt.y + '%;transform:translate(-50%,-50%)' + (active ? ' scale(1.16)' : ' scale(1)') + ';'
       + 'width:56px;height:56px;border-radius:4px;display:grid;place-items:center;cursor:pointer;font-family:inherit;'
-      + 'color:' + (active ? '#1B1917' : '#E4622E') + ';'
-      + 'background:' + (active ? 'linear-gradient(150deg,#E0A544,#E4622E)' : 'rgba(228,98,46,.10)') + ';'
-      + 'border:1px ' + (active ? 'solid rgba(228,98,46,.9)' : 'dashed rgba(228,98,46,.5)') + ';'
-      + 'box-shadow:' + (active ? '0 10px 26px -14px rgba(228,98,46,.9)' : 'none') + ';z-index:5;'
+      + 'color:' + (active ? 'var(--color-bg-base)' : 'var(--color-accent)') + ';'
+      + 'background:' + (active ? 'linear-gradient(150deg,var(--color-support-amber),var(--color-accent))' : 'rgba(var(--rgb-accent),.10)') + ';'
+      + 'border:1px ' + (active ? 'solid rgba(var(--rgb-accent),.9)' : 'dashed rgba(var(--rgb-accent),.5)') + ';'
+      + 'box-shadow:' + (active ? '0 10px 26px -14px rgba(var(--rgb-accent),.9)' : 'none') + ';z-index:5;'
       + 'transition:transform .45s cubic-bezier(.34,1.28,.4,1),box-shadow .3s;'
       + 'animation:popIn .55s cubic-bezier(.16,1,.3,1) both ' + (120 + i * 85) + 'ms;';
   }
@@ -331,55 +399,91 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
    *  pass either — it just flows with the page like any other row. */
   private productChipStyle(active: boolean): string {
     return 'flex:none;padding:9px 13px;border-radius:20px;cursor:pointer;font-family:inherit;font-weight:700;font-size:13px;'
-      + 'color:' + (active ? '#1B1917' : '#E4622E') + ';'
-      + 'background:' + (active ? 'linear-gradient(150deg,#E0A544,#E4622E)' : 'rgba(228,98,46,.10)') + ';'
-      + 'border:1px ' + (active ? 'solid rgba(228,98,46,.9)' : 'dashed rgba(228,98,46,.5)') + ';'
-      + 'box-shadow:' + (active ? '0 8px 18px -10px rgba(228,98,46,.85)' : 'none') + ';'
+      + 'color:' + (active ? 'var(--color-bg-base)' : 'var(--color-accent)') + ';'
+      + 'background:' + (active ? 'linear-gradient(150deg,var(--color-support-amber),var(--color-accent))' : 'rgba(var(--rgb-accent),.10)') + ';'
+      + 'border:1px ' + (active ? 'solid rgba(var(--rgb-accent),.9)' : 'dashed rgba(var(--rgb-accent),.5)') + ';'
+      + 'box-shadow:' + (active ? '0 8px 18px -10px rgba(var(--rgb-accent),.85)' : 'none') + ';'
       + 'transition:transform .3s cubic-bezier(.34,1.28,.4,1),background .3s,color .3s,box-shadow .3s;';
   }
 
   override renderVals(): RenderVals {
+    const lang = this.state.lang;
     const sel = SKILLS.find((s) => s.id === this.state.skill) ?? SKILLS[1] ?? SKILLS[0];
     const byId: Record<string, Skill> = {};
     SKILLS.forEach((s) => { byId[s.id] = s; });
 
     const currentProduct = PRODUCT_TYPES[this.state.productIndex] ?? PRODUCT_TYPES[0];
     const product: ProductTypeView = {
-      tag: currentProduct.tag, title: currentProduct.title, explainer: currentProduct.explainer,
-      examples: currentProduct.examples, idealFor: currentProduct.idealFor, timeframe: currentProduct.timeframe,
-      counter: 'Tipo ' + currentProduct.tag + ' de ' + String(PRODUCT_TYPES.length).padStart(2, '0'),
-      waLink: whatsAppLink('Olá, André! Vim pela Oficina Digital e quero falar sobre um projeto de ' + currentProduct.title + '.'),
+      tag: currentProduct.tag,
+      title: currentProduct.title[lang],
+      explainer: currentProduct.explainer[lang],
+      examples: currentProduct.examples[lang],
+      idealFor: currentProduct.idealFor[lang],
+      timeframe: currentProduct.timeframe[lang],
+      counter: lang === 'pt'
+        ? 'Tipo ' + currentProduct.tag + ' de ' + String(PRODUCT_TYPES.length).padStart(2, '0')
+        : 'Type ' + currentProduct.tag + ' of ' + String(PRODUCT_TYPES.length).padStart(2, '0'),
+      waLink: whatsAppLink(lang === 'pt'
+        ? 'Olá, André! Vim pela Oficina Digital e quero falar sobre um projeto de ' + currentProduct.title.pt + '.'
+        : 'Hello, André! I came through the Digital Workshop and want to talk about a ' + currentProduct.title.en + ' project.'),
     };
 
     const activeProjectSource = PROJECTS.find((p) => p.id === this.state.project) ?? null;
+
+    // Load active translations
+    const t: Record<string, string> = {};
+    for (const [key, value] of Object.entries(TRANSLATIONS)) {
+      t[key] = value[lang];
+    }
 
     return {
       cursorOn: this.props.cursorEnabled !== false,
       cursorDensity: this.props.cursorDensity ?? 20,
       heroPixelSize: this.props.revealPixelSize ?? 28,
-      nodes: SKILLS.map((n) => ({ ...n, style: this.nodeStyle(n, n.id === this.state.skill) })),
+      nodes: SKILLS.map((n) => ({
+        ...n,
+        label: n.label[lang],
+        kind: n.kind[lang],
+        desc: n.desc[lang],
+        style: this.nodeStyle(n, n.id === this.state.skill),
+      })),
       links: EDGES.map(([a, b]) => {
         const from = byId[a], to = byId[b];
         return { x1: from?.x ?? 0, y1: from?.y ?? 0, x2: to?.x ?? 0, y2: to?.y ?? 0, color: to ? BRANCH[to.b].color : BRANCH.core.color };
       }),
       productTypes: PRODUCT_TYPES.map((pt, i) => {
         const active = i === this.state.productIndex;
-        return { ...pt, i, style: this.productStyle(pt, i, active), mobileStyle: this.productChipStyle(active) };
+        return {
+          ...pt,
+          short: pt.short[lang],
+          title: pt.title[lang],
+          explainer: pt.explainer[lang],
+          examples: pt.examples[lang],
+          idealFor: pt.idealFor[lang],
+          timeframe: pt.timeframe[lang],
+          i,
+          style: this.productStyle(pt, i, active),
+          mobileStyle: this.productChipStyle(active),
+        };
       }),
       product,
       sel: {
-        label: sel.label,
-        branchLabel: BRANCH[sel.b].label,
-        desc: sel.desc,
+        label: sel.label[lang],
+        branchLabel: BRANCH[sel.b].label[lang],
+        desc: sel.desc[lang],
         levelPct: sel.lvl + '%',
-        levelLabel: sel.lvl >= 85 ? 'avançado' : sel.lvl >= 74 ? 'sólido' : 'em evolução',
+        levelLabel: sel.lvl >= 85
+          ? (lang === 'pt' ? 'avançado' : 'advanced')
+          : sel.lvl >= 74
+            ? (lang === 'pt' ? 'sólido' : 'solid')
+            : (lang === 'pt' ? 'em evolução' : 'evolving'),
       },
       logoMarkHeader: logoMark(36, true),
       logoMarkFooter: logoMark(26, false),
       logoMarkStamp: logoMark(30, false),
       logoMarkModal: logoMark(22, false),
-      projects: PROJECTS.map((p) => this.enrichProject(p)),
-      activeProject: activeProjectSource ? this.enrichProject(activeProjectSource) : null,
+      projects: PROJECTS.map((p) => this.enrichProject(p, lang)),
+      activeProject: activeProjectSource ? this.enrichProject(activeProjectSource, lang) : null,
       openProject: this.openProject,
       closeProject: this.closeProject,
       stopPropagation: this.stopPropagation,
@@ -397,6 +501,18 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       iaCanvasInner: this.iaCanvasInner,
       esteiraFrame: this.esteiraFrame,
       esteiraInner: this.esteiraInner,
+      // i18n and theme variables
+      t,
+      currentLangLabel: lang === 'pt' ? 'EN' : 'PT',
+      currentThemeIcon: this.state.theme === 'default' ? '🌙' : '☀',
+      toggleLang: this.toggleLang,
+      toggleTheme: this.toggleTheme,
+      // `t['key']` (not `t.key`): `t` is a plain `Record<string, string>` —
+      // bracket access is what `noPropertyAccessFromIndexSignature` requires
+      // for it, same as everywhere else this file reads through an index
+      // signature.
+      contactWaLink: whatsAppLink(t['contactWhatsAppMessage'] ?? ''),
+      slotWaLink: whatsAppLink(t['slotWhatsAppMessage'] ?? ''),
     };
   }
 }
