@@ -69,6 +69,35 @@ export interface SkillWithStyle extends Localized<Skill> {
   style: string;
 }
 
+/**
+ * One `Skill` as shown in the mobile "Mapa de IA" — a plain tap target inside
+ * a branch's accordion list, not a canvas node, so it drops the (x, y, t)
+ * layout fields `SkillWithStyle` needs and adds only what a list row reads.
+ */
+export interface MobileSkillItem {
+  id: string;
+  label: string;
+  kind: string;
+  desc: string;
+  lvl: number;
+  active: boolean;
+  /** Computed inline style for the row — branch-colored highlight when `active`. */
+  style: string;
+}
+
+/**
+ * One branch's worth of `MobileSkillItem`s, grouped for the mobile
+ * accordion-by-branch layout (see `<details id="ia-mobile-groups">` in the
+ * `.dc.html` and the "Mapa mobile" decision it implements — no drag, no
+ * canvas coordinates, just a vertical list a thumb can scroll).
+ */
+export interface MobileBranchGroup {
+  id: BranchId;
+  label: string;
+  color: string;
+  skills: readonly MobileSkillItem[];
+}
+
 /** A rendered connector line between two skill nodes. */
 export interface RenderedLink {
   x1: number;
@@ -108,8 +137,10 @@ export interface ProductType {
 export interface ProductTypeWithStyle extends Localized<ProductType> {
   i: number;
   style: string;
-  /** Chip look for the mobile prev/next navigator — see `productChipStyle`. */
-  mobileStyle: string;
+  /** wa.me deep link pre-filled with a message naming *this* product type —
+   *  unlike `ProductTypeView.waLink` (only the currently-selected one), the
+   *  mobile carousel shows every card at once and each needs its own CTA. */
+  waLink: string;
 }
 
 /** The currently-selected product type, flattened for the detail panel. */
