@@ -154,8 +154,8 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
    *  becomes a scrollable viewport (CSS, `@media (max-width:720px)`), so
    *  the visitor pans/scrolls the map instead of squinting at a shrunk one.
    *  The esteira doesn't need this branch: below the same breakpoint it's
-   *  swapped out entirely for `#esteira-wheel`, a percentage-based circular
-   *  layout that never needed px-scaling to begin with. */
+   *  swapped out entirely for `#esteira-wheel`, a plain prev/next chip
+   *  navigator that never needed px-scaling to begin with. */
   private _fitCanvases = (): void => {
     if (window.innerWidth <= MOBILE_BREAKPOINT) {
       if (this.iaCanvasInner.current) this.iaCanvasInner.current.style.transform = 'none';
@@ -204,10 +204,29 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     if (this._resize) window.removeEventListener('resize', this._resize);
   }
 
+  /** Handles clicks on both product-type pickers: the desktop esteira's
+   *  fixed stops (`[data-product-type]`) and the mobile navigator's
+   *  ‹/› buttons (`[data-product-nav]`, a relative step that wraps around
+   *  `PRODUCT_TYPES`'s length). Checked in that order so a nav button
+   *  (which sits inside the same `#esteira-wheel` click region as the chip
+   *  row) doesn't also get mis-read as a direct chip pick. */
   pickProduct = (ev: ReactMouseEvent): void => {
+    const navBtn = closestFromTarget(ev, '[data-product-nav]');
+    if (navBtn) {
+      const total = PRODUCT_TYPES.length;
+      const delta = Number(navBtn.getAttribute('data-product-nav'));
+      this._selectProduct(((this.state.productIndex + delta) % total + total) % total);
+      return;
+    }
     const btn = closestFromTarget(ev, '[data-product-type]');
     if (!btn) return;
-    const i = Number(btn.getAttribute('data-product-type'));
+    this._selectProduct(Number(btn.getAttribute('data-product-type')));
+  };
+
+  /** Selects product type `i`: moves the desktop esteira's avatar to its
+   *  track position, updates state, and replays the detail panel's
+   *  reveal animation. Shared by both `pickProduct` branches above. */
+  private _selectProduct(i: number): void {
     const pt = PRODUCT_TYPES[i];
     if (!pt) return;
     if (this.avatar.current) {
@@ -222,7 +241,7 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
         { duration: 460, easing: 'cubic-bezier(.16,1,.3,1)' }
       );
     }
-  };
+  }
 
   pickSkill = (ev: ReactMouseEvent): void => {
     const btn = closestFromTarget(ev, '[data-skill]');
@@ -302,25 +321,21 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       + 'animation:popIn .55s cubic-bezier(.16,1,.3,1) both ' + (120 + i * 85) + 'ms;';
   }
 
-  /** Position + look of one stop on the mobile "roda" (circular) layout that
-   *  replaces the esteira's fixed-px conveyor below 720px (`#esteira-wheel`
-   *  in the `.dc.html`) — every product type placed at an equal angle around
-   *  a center hub instead of along the winding track, so all five stay
-   *  reachable and legible on a phone without a scale-down. Percentage-based
-   *  (unlike `productStyle`'s px track), so it needs no `fitToFrame()` pass. */
-  private productMobileStyle(i: number, total: number, active: boolean): string {
-    const angle = (i / total) * Math.PI * 2 - Math.PI / 2;
-    const rx = 38, ry = 38;
-    const x = 50 + rx * Math.cos(angle);
-    const y = 50 + ry * Math.sin(angle);
-    return 'position:absolute;left:' + x.toFixed(2) + '%;top:' + y.toFixed(2) + '%;transform:translate(-50%,-50%)' + (active ? ' scale(1.14)' : ' scale(1)') + ';'
-      + 'width:52px;height:52px;border-radius:50%;display:grid;place-items:center;cursor:pointer;font-family:inherit;'
+  /** Look of one chip in the mobile prev/next navigator (`#esteira-wheel`,
+   *  in the `.dc.html`) that replaces the esteira's fixed-px conveyor below
+   *  720px — a plain wrapping row of tag chips plus dedicated ‹/› buttons,
+   *  rather than a circular layout: every chip stays a guaranteed-visible,
+   *  full-size tap target on a narrow, tall viewport, and "which one is
+   *  selected" reads immediately left-to-right instead of needing to scan
+   *  around a ring. No absolute positioning, so it needs no `fitToFrame()`
+   *  pass either — it just flows with the page like any other row. */
+  private productChipStyle(active: boolean): string {
+    return 'flex:none;padding:9px 13px;border-radius:20px;cursor:pointer;font-family:inherit;font-weight:700;font-size:13px;'
       + 'color:' + (active ? '#1B1917' : '#E4622E') + ';'
       + 'background:' + (active ? 'linear-gradient(150deg,#E0A544,#E4622E)' : 'rgba(228,98,46,.10)') + ';'
       + 'border:1px ' + (active ? 'solid rgba(228,98,46,.9)' : 'dashed rgba(228,98,46,.5)') + ';'
-      + 'box-shadow:' + (active ? '0 10px 22px -12px rgba(228,98,46,.85)' : 'none') + ';z-index:5;'
-      + 'transition:transform .4s cubic-bezier(.34,1.28,.4,1),box-shadow .3s;'
-      + 'animation:popIn .5s cubic-bezier(.16,1,.3,1) both ' + (100 + i * 70) + 'ms;';
+      + 'box-shadow:' + (active ? '0 8px 18px -10px rgba(228,98,46,.85)' : 'none') + ';'
+      + 'transition:transform .3s cubic-bezier(.34,1.28,.4,1),background .3s,color .3s,box-shadow .3s;';
   }
 
   override renderVals(): RenderVals {
@@ -349,7 +364,7 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       }),
       productTypes: PRODUCT_TYPES.map((pt, i) => {
         const active = i === this.state.productIndex;
-        return { ...pt, i, style: this.productStyle(pt, i, active), mobileStyle: this.productMobileStyle(i, PRODUCT_TYPES.length, active) };
+        return { ...pt, i, style: this.productStyle(pt, i, active), mobileStyle: this.productChipStyle(active) };
       }),
       product,
       sel: {

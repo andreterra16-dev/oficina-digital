@@ -248,7 +248,11 @@ interface ShadowRootInitWithClonable extends ShadowRootInit {
             const mv = merged[k];
             const jv = parsed[k];
             if (isSlotRecord(mv) && !mv.u && jv) {
-              mv.u = typeof jv === 'string' ? jv : jv.u;
+              // Assign only when the sidecar actually has a url — under
+              // exactOptionalPropertyTypes, `mv.u = undefined` is a distinct
+              // (and here, wrong) act from just leaving `u` unset.
+              const u = typeof jv === 'string' ? jv : jv.u;
+              if (u) mv.u = u;
             }
           }
           for (const id of tombstones) delete merged[id];
@@ -575,7 +579,6 @@ interface ShadowRootInitWithClonable extends ShadowRootInit {
     private _spill!: HTMLDivElement;
     private _ctl!: HTMLDivElement;
     private _credit!: HTMLSpanElement;
-    private _attrError!: HTMLDivElement;
     private _ghost!: HTMLImageElement;
     private _err: HTMLDivElement | null = null;
     private _input!: HTMLInputElement;
@@ -667,7 +670,10 @@ interface ShadowRootInitWithClonable extends ShadowRootInit {
       this._spill = root.querySelector<HTMLDivElement>('.spill')!;
       this._ctl = root.querySelector<HTMLDivElement>('.ctl')!;
       this._credit = root.querySelector<HTMLSpanElement>('.credit')!;
-      this._attrError = root.querySelector<HTMLDivElement>('.attr-error')!;
+      // `.attr-error`'s visibility is driven entirely by the
+      // `:host([data-attribution-error])` CSS rule + `toggleAttribute(...)`
+      // below — no JS ever reads a reference to the element itself, so
+      // unlike its siblings above it doesn't get one.
       // Credit clicks open the link, not browse/reframe.
       this._credit.addEventListener('click', (e: Event) => e.stopPropagation());
       this._credit.addEventListener('dblclick', (e: Event) => e.stopPropagation());
@@ -1325,9 +1331,14 @@ interface ShadowRootInitWithClonable extends ShadowRootInit {
         // shape; other text keeps the legacy single-link rendering.
         const m = /^Photo by (.+) on Unsplash$/.exec(credit);
         if (m) {
+          // The pattern has exactly one capturing group, so `m[1]` is always
+          // set whenever `m` itself matched — the `?? ''` is only to satisfy
+          // `noUncheckedIndexedAccess`'s (correctly generic) view of match
+          // arrays, not a real fallback path.
+          const name = m[1] ?? '';
           this._credit.appendChild(document.createTextNode('Photo by '));
           this._credit.appendChild(
-            href ? mkLink(m[1], href) : document.createTextNode(m[1])
+            href ? mkLink(name, href) : document.createTextNode(name)
           );
           this._credit.appendChild(document.createTextNode(' on '));
           this._credit.appendChild(mkLink('Unsplash', UNSPLASH_HOMEPAGE_HREF));

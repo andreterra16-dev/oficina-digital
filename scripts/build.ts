@@ -54,6 +54,10 @@ async function buildComponents(): Promise<void> {
       target: 'es2020',
       write: false,
       logLevel: 'silent',
+      // These ship as-is to every visitor's browser (plain <script src>,
+      // no further bundler downstream) — minifying is a pure transfer-size
+      // win with no behavior change, so there's no reason to skip it.
+      minify: true,
     });
     const [file] = result.outputFiles;
     if (!file) throw new Error(`esbuild produced no output for ${entry}`);
@@ -87,6 +91,16 @@ async function buildDcLogic(): Promise<string> {
     target: 'es2020',
     write: false,
     logLevel: 'silent',
+    // Same rationale as buildComponents(): this is the actual script every
+    // visitor's browser evaluates, not a human-edited region of the
+    // .dc.html (see the README's "Regras de estilo do arquivo") — so
+    // minifying it is free size-wise. `minifyIdentifiers` is deliberately
+    // left off, though: it renames the top-level `Component` binding this
+    // whole build step depends on (stripTrailingExport below, and the DC
+    // runtime's own `new Function(...)` lookup) to something like `M`,
+    // which breaks both silently rather than through a type error.
+    minifyWhitespace: true,
+    minifySyntax: true,
   });
   const [file] = result.outputFiles;
   if (!file) throw new Error(`esbuild produced no output for ${entry}`);

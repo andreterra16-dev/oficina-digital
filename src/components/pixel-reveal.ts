@@ -136,7 +136,7 @@
           const stepX = Math.max(1, Math.floor((x1 - x0) / 6));
           for (let sy = y0; sy < y1 && !has; sy += stepY) {
             for (let sx = x0; sx < x1; sx += stepX) {
-              if (data[(sy * off.width + sx) * 4 + 3] > 6) { has = true; break; }
+              if ((data[(sy * off.width + sx) * 4 + 3] ?? 0) > 6) { has = true; break; }
             }
           }
           if (has) tiles.push({ x, y });
@@ -144,7 +144,12 @@
       }
       for (let i = tiles.length - 1; i > 0; i--) {
         const j = (Math.random() * (i + 1)) | 0;
-        const t = tiles[i]; tiles[i] = tiles[j]; tiles[j] = t;
+        const ti = tiles[i], tj = tiles[j];
+        // `i`/`j` are always in-bounds here (Fisher-Yates over `tiles`'s own
+        // length) — this guard exists only to satisfy `noUncheckedIndexedAccess`,
+        // it never actually skips a swap.
+        if (!ti || !tj) continue;
+        tiles[i] = tj; tiles[j] = ti;
       }
       this._tiles = tiles;
       this._dpr = dpr;
@@ -196,9 +201,10 @@
         let all = true;
         for (let i = 0; i < tiles.length; i++) {
           if (done[i]) continue;
+          const t = tiles[i];
+          if (!t) continue; // in-bounds by construction (i < tiles.length); satisfies noUncheckedIndexedAccess
           const p = (el - i * stagger) / fade;
           if (p <= 0) { all = false; continue; }
-          const t = tiles[i];
           const dx = Math.round(t.x * dpr), dy = Math.round(t.y * dpr);
           const dw = Math.round((t.x + px) * dpr) - dx, dh = Math.round((t.y + px) * dpr) - dy;
           ctx.clearRect(dx, dy, dw, dh);

@@ -135,9 +135,13 @@ Portfólio de página única, publicado como um Design Component autocontido
 carrega, sem bundler, sem framework do lado do cliente além do runtime vendorizado
 (`support.js`).
 
-**Mas isso não é o que se edita.** A fonte de verdade é TypeScript, 100% tipado,
-em `src/`. Um build (`npm run build`) compila essa fonte de volta para o
-`.dc.html`/`components/*.js` que o navegador roda.
+**Mas isso não é o que se edita.** A fonte de verdade é TypeScript, 100% tipado
+sob `strict` mais um conjunto adicional de flags de rigor
+(`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noUnusedLocals`,
+`noUnusedParameters`) — zero `any`, zero cast inseguro, zero acesso a índice
+sem garantia de existência — em `src/`. Um build (`npm run build`) compila
+essa fonte, minificada, de volta para o `.dc.html`/`components/*.js` que o
+navegador roda.
 
 ### Estrutura
 
@@ -189,15 +193,25 @@ o build é só o passo que atualiza os arquivos gerados a partir da fonte TS.
 Sem build pendente rodado, os arquivos gerados ficam desatualizados em relação
 a `src/` — rode `npm run build` sempre que editar algo em `src/` ou `scripts/`.
 
+O build minifica `components/*.js` e o script injetado no `.dc.html` (menos
+bytes pro visitante baixar, sem trocar comportamento). Uma exceção
+deliberada: o identificador de nível superior `Component` nunca é renomeado —
+o runtime da DC (`support.js`) o procura por esse nome exato via
+`new Function(...)`, então só a minificação de espaço/sintaxe roda nesse
+bundle específico, não a de identificadores.
+
 ### Seções do site, na ordem
 
 1. **Hero — etapa 01 · planta.** Título "Oficina Digital", painel emoldurado com a cena da lousa.
 2. **Bancada de IA — etapa 02.** Árvore de habilidades clicável; nós e ligações vêm de
-   `SKILLS` / `EDGES` na classe de lógica.
+   `SKILLS` / `EDGES` na classe de lógica. Abaixo de 720px o canvas para de encolher (o que
+   deixava os rótulos ilegíveis) e vira um viewport arrastável/rolável em tamanho nativo.
 3. **O jogo do seu projeto — etapa 03.** Esteira com os 5 tipos de produto que André constrói
    (`PRODUCT_TYPES`) com painel de detalhe e um CTA de WhatsApp com mensagem pré-preenchida.
-   Abaixo, os cartões de projeto entregues, cada um com modal individual (problema, resultado,
-   desafios técnicos, estratégia de mapeamento e evolução).
+   Abaixo de 720px a esteira dá lugar a um navegador ‹/› + fileira de chips, pensado pra tela
+   vertical em vez de uma faixa horizontal encolhida. Abaixo, os cartões de projeto entregues,
+   cada um com modal individual (problema, resultado, desafios técnicos, estratégia de
+   mapeamento e evolução).
 4. **Sobre — etapa 04 · acabamento.** Texto de posicionamento e números.
 5. **Contato — entrega.** E-mail, LinkedIn, rodapé.
 
@@ -245,7 +259,9 @@ descartados na varredura de alfa, então recortes em PNG revelam apenas a silhue
 
 **`<ascii-cursor cell-size radius density hold box-color text-color fade>`** — overlay fixo em
 toda a página. A intensidade é cheia sobre a hero e cai para o fator `fade` conforme a rolagem
-avança, para não competir com o conteúdo. Pausa com a aba oculta.
+avança, para não competir com o conteúdo. Pausa com a aba oculta. Toque tem um perfil de
+reação próprio (raio/densidade maiores, quase sem atraso de suavização, sub-passos ao longo do
+arrasto) — a intenção é que o dedo pareça "cortar" a página, não só arrastar um cursor de mouse.
 
 **`<image-slot id placeholder src fit>`** — área de imagem que o usuário preenche arrastando o
 arquivo; a escolha persiste entre recarregamentos. Cada slot precisa de um `id` distinto. Aceita

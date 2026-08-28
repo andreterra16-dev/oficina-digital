@@ -21,7 +21,6 @@
 
   class AsciiCursor extends HTMLElement {
     private _up = false;
-    private _cv: HTMLCanvasElement | null = null;
     private _raf = 0;
     private _sraf = 0;
     private _onResize: (() => void) | null = null;
@@ -41,7 +40,7 @@
       // to shorten, it's all driven by requestAnimationFrame.)
       if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
       this._up = true;
-      const cv = this._cv = document.createElement('canvas');
+      const cv = document.createElement('canvas');
       Object.assign(cv.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', display: 'block' });
       this.appendChild(cv);
       const ctx = cv.getContext('2d');
@@ -170,7 +169,7 @@
                   g.hidden = Math.random() < .04;
                 }
                 g.at = t;
-                if (g.char === ' ' || Math.random() < .15) g.char = POOL[(Math.random() * POOL.length) | 0];
+                if (g.char === ' ' || Math.random() < .15) g.char = POOL.charAt((Math.random() * POOL.length) | 0);
                 active.add(idx);
               }
             }
@@ -190,7 +189,7 @@
           if (el >= g.delay + g.dur) { g.char = ' '; g.at = 0; g.hidden = false; active.delete(idx); continue; }
           if (g.hidden) continue;
           const c = Math.floor(idx / rows), rw = idx % rows;
-          if (el >= g.delay && Math.random() < scramble) g.char = POOL[(Math.random() * POOL.length) | 0];
+          if (el >= g.delay && Math.random() < scramble) g.char = POOL.charAt((Math.random() * POOL.length) | 0);
           const x = c * cell, y = rw * cell;
           ctx.fillStyle = boxColor;
           ctx.fillRect(x, y, cell, cell);

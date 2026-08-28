@@ -1,4 +1,4 @@
-import type { ProductType } from '../types/domain';
+import type { NonEmptyArray, ProductType } from '../types/domain';
 
 /**
  * The kinds of product on "o jogo do seu projeto" (etapa 03) — what a
@@ -8,7 +8,7 @@ import type { ProductType } from '../types/domain';
  * lands exactly on the curve, so the visual track never had to be redrawn
  * for this to hold fewer stops than it used to.
  */
-export const PRODUCT_TYPES: readonly ProductType[] = [
+export const PRODUCT_TYPES: NonEmptyArray<ProductType> = [
   {
     tag: '01', short: "LP's Modernas", x: 8, y: 72.5, title: "Landing Pages Modernas",
     explainer: 'Uma página única, feita pra converter quem chega até ela. Pensada pra rodar bem em anúncio, lançamento ou campanha, com um só objetivo claro: fazer a pessoa agir (comprar, agendar, cadastrar).',

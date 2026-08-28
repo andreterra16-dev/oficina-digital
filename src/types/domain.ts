@@ -2,6 +2,17 @@
 // PROJECTS and the Component's own state. Kept separate from the data
 // modules so `src/logic/component.ts` can import just the types it needs.
 
+/**
+ * An array statically known to have at least one element — lets `arr[0]`
+ * resolve to `T` instead of `T | undefined` even under
+ * `noUncheckedIndexedAccess`, which arbitrary-index access into a plain
+ * `readonly T[]` cannot. Used for `SKILLS`/`PRODUCT_TYPES`: both back a
+ * "selected node" fallback chain (`… ?? LIST[0]`) that must always resolve
+ * to a real item — content the site's own home page keeps non-empty by
+ * construction, not something a reader-only visitor could ever make empty.
+ */
+export type NonEmptyArray<T> = readonly [T, ...T[]];
+
 /** The three skill branches plus the root node ("André" himself). */
 export type BranchId = 'ia' | 'web' | 'dados' | 'core';
 
@@ -76,7 +87,7 @@ export interface ProductType {
 export interface ProductTypeWithStyle extends ProductType {
   i: number;
   style: string;
-  /** Position on the mobile "roda" (circular) layout — see `productMobileStyle`. */
+  /** Chip look for the mobile prev/next navigator — see `productChipStyle`. */
   mobileStyle: string;
 }
 
