@@ -17,6 +17,13 @@ export const TRANSLATIONS: Record<string, I18nString> = {
   headerThemeToggle: { pt: 'Alterar tema', en: 'Switch theme' },
   railLabel: { pt: 'montagem', en: 'assembly' },
 
+  // boot sequence — decorative terminal intro, plays once per page load
+  bootLine1: { pt: 'iniciando oficina_digital.sys', en: 'booting oficina_digital.sys' },
+  bootLine2: { pt: 'carregando bancada de habilidades', en: 'loading skills workbench' },
+  bootLine3: { pt: 'verificando integridade dos projetos', en: 'verifying project integrity' },
+  bootLine4: { pt: 'sincronizando tema e idioma', en: 'syncing theme & language' },
+  bootReady: { pt: 'acesso concedido — bem-vindo(a) à oficina.', en: 'access granted — welcome to the workshop.' },
+
   // hero section
   heroStage: { pt: 'Etapa 01 · planta', en: 'Stage 01 · blueprint' },
   heroStatus: { pt: 'oficina aberta', en: 'workshop open' },

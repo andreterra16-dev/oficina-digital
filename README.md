@@ -178,6 +178,7 @@ src/                             FONTE — edite aqui
   components/
     pixel-reveal.ts               <pixel-reveal>  revelação da imagem em tiles
     ascii-cursor.ts               <ascii-cursor>  rastro ASCII que segue o ponteiro
+    matrix-rain.ts                <matrix-rain>   chuva digital decorativa (Bancada de IA)
     image-slot.ts                 <image-slot>    placeholder de imagem arrastável
 
 scripts/
@@ -245,6 +246,8 @@ Depois de qualquer mudança em `src/`, rode `npm run build`.
 | --- | --- |
 | Tipos de produto (título, explicação, exemplos, pra quem é, prazo) | `src/data/product-types.ts` |
 | Texto de UI (labels de seção, CTAs, chrome do modal, rodapé) — PT e EN | `src/data/translations.ts` |
+| Linhas da sequência de boot (PT e EN) | `src/data/translations.ts` (`bootLine1..4`, `bootReady`) |
+| Cor/densidade/velocidade da chuva digital (`<matrix-rain>`) | atributos inline no `.dc.html` (dentro de `#ia-canvas`) |
 | Cor de tema (Warm Forge e Cold Steel) | tokens `:root` / `html[data-theme="alternate"]` no `<helmet><style>` do `.dc.html` |
 | Número/mensagens do WhatsApp | `src/logic/whatsapp.ts` (CTA dinâmico do jogo do projeto); os outros 3 CTAs de WhatsApp são estáticos, direto no `.dc.html` |
 | Habilidades da árvore e suas ligações | `src/data/skills.ts` |
@@ -257,6 +260,36 @@ Depois de qualquer mudança em `src/`, rode `npm run build`.
 | Imagens dos projetos (permanente, o que o visitante público vê) | arquivo em `assets/` + campo `logo` correspondente em `src/data/projects.ts`, então `npm run build` |
 | Cor de destaque, cursor, granularidade do reveal | painel de Tweaks (props do componente) |
 | Markup/layout/animações CSS | direto em `Portfolio Andre Ricco.dc.html` — só a região dentro de `<script data-dc-script>` é gerada |
+
+### Identidade visual — camada terminal/hacker
+
+Sobre a base "oficina industrial" original, o site carrega uma camada adicional de referência
+a cultura hacker/terminal — reforço estético, não uma reescrita da arquitetura:
+
+- **Sequência de boot.** Ao carregar, um overlay full-screen (`z-index:300`, `pointer-events:none`
+  desde o primeiro frame) escreve um log de "inicialização" linha a linha e se auto-oculta em
+  ~3.4s (`bootOverlayOut`, ver `<helmet><style>`). É CSS puro — sem estado no `Component` — as
+  linhas vêm de `TRANSLATIONS.bootLine1..4`/`bootReady` em `translations.ts`, então PT/EN cobrem
+  o boot como cobrem o resto do texto do site. Sob `prefers-reduced-motion`, a regra geral de
+  `animation-duration:.001ms!important` colapsa a sequência inteira quase instantaneamente —
+  sem flash de boot pra quem pediu menos movimento.
+- **Scanlines de CRT.** Uma camada fixa (`z-index:69`) com `repeating-linear-gradient` varrendo
+  lentamente + `crtFlicker` (uma queda de opacidade rara, não uma cintilação constante) sobre
+  toda a página.
+- **Glitch de sinal.** O nome "André Ricco Terra" e o título "Oficina Digital"/"Digital Workshop"
+  levam `glitchPulse`: um keyframe que fica parado ~92% do ciclo e só nos ~4% finais faz um
+  corte de posição + drop-shadow bicolor (accent/steel), lendo como uma interferência de sinal
+  ocasional, não uma vibração contínua.
+- **Prompts de terminal.** Os rótulos de etapa (Hero, Bancada de IA, Projetos, Sobre) e o
+  wordmark do header ganharam prefixo `$` / `>` e um cursor de bloco piscante (`termCursor`),
+  tudo inline, sem chave de tradução nova além do texto já existente.
+- **Chrome de terminal nos cards de projeto.** Cada `article[data-project]` (e o card-teaser de
+  slot aberto) abre com uma barrinha de 3 "semáforos" + um path falso `~/projetos/{id}.tsx`
+  antes da imagem de capa — puramente decorativo, usa `p.id` que já existe.
+- **`<matrix-rain>`** — ver "Componentes" acima.
+
+Nada disso depende de estado do `Component`; é seguro editar/remover qualquer peça direto no
+`.dc.html` sem tocar `src/logic/`.
 
 ### Idioma e tema
 
@@ -336,6 +369,17 @@ aplica o valor a um elemento-sonda real no DOM (`probe.style.color = value`) e l
 processado via `getComputedStyle`, e reobserva `data-theme` na `<html>` pra re-resolver quando o
 tema muda. Se um dia trocar esses atributos por hex direto o probe vira no-op — sem risco, só
 desnecessário.
+
+**`<matrix-rain rgb-var bg-rgb-var font-size density speed max-opacity>`** — camada de "chuva
+digital" decorativa, hoje usada só como fundo da tela do canvas da Bancada de IA (`#ia-canvas`).
+`rgb-var`/`bg-rgb-var` recebem o **nome** de uma custom property já no formato "r, g, b" (ex.:
+`--rgb-branch-ia`, `--rgb-bg-panel` — ver Paleta), não um `var(...)` nem um hex: como essas
+tokens já são um triplet plano, o componente só precisa de `getComputedStyle(...).getPropertyValue(name)`
+pra montar `rgba(...)` na mão — diferente do `<ascii-cursor>` acima, aqui não há necessidade do
+truque do elemento-sonda (não existe um valor `<color>` pra resolver, só uma string já pronta).
+Reobserva `data-theme` do mesmo jeito, pra seguir o tema ativo. Como toda a página, some por
+completo (não monta) sob `prefers-reduced-motion: reduce` — é puramente decorativo, sem
+conteúdo informacional, então a resposta correta é não animar, não degradar.
 
 **`<image-slot id placeholder src fit>`** — área de imagem preenchível por arrasto, com um `src`
 inicial opcional (usado por toda capa de projeto — logo, screenshot ou nenhum dos dois ainda).
