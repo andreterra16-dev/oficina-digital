@@ -504,6 +504,7 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
           return {
             id: s.id,
             label: s.label[lang],
+            color: b.color,
             active,
             style: 'display:flex;align-items:baseline;gap:10px;width:100%;text-align:left;padding:7px 10px;border-radius:3px;cursor:pointer;font-family:inherit;'
               + 'background:' + (active ? 'rgba(' + b.rgb + ',.16)' : 'transparent') + ';'
@@ -594,6 +595,8 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
         id: sel.id,
         label: sel.label[lang],
         branchLabel: BRANCH[sel.b].label[lang],
+        branchColor: BRANCH[sel.b].color,
+        branchRgb: BRANCH[sel.b].rgb,
         desc: sel.desc[lang],
         levelPct: sel.lvl + '%',
         levelBar: asciiLevelBar(sel.lvl),

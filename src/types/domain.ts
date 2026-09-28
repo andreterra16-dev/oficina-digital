@@ -64,6 +64,10 @@ export interface Skill {
 export interface TerminalCommand {
   id: string;
   label: string;
+  /** This command's branch color — carries the IA/Web/Dados legend color
+   *  all the way into the command-id text, instead of flattening every
+   *  row to the same accent color regardless of branch. */
+  color: string;
   /** Highlighted when this is the currently-displayed skill (`sel.id`) —
    *  true whether it got there by a click or by a matching typed query. */
   active: boolean;
@@ -137,6 +141,13 @@ export interface SelectionView {
   id: string;
   label: string;
   branchLabel: string;
+  /** This skill's branch color — same value driving its row in the command
+   *  list, so the doc readout's branch line and level bar stay visually
+   *  tied to the branch that's active, instead of every skill's output
+   *  looking identical regardless of which branch it belongs to. */
+  branchColor: string;
+  /** Same color as `branchColor`, pre-split as an `"r,g,b"` string for `rgba(...)`. */
+  branchRgb: string;
   desc: string;
   levelPct: string;
   /** The level, as a 10-block ASCII bar (`'████████░░'`) — terminal output

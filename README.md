@@ -278,6 +278,21 @@ saída de terminal de verdade nunca troca de fonte no meio.
 Nenhum estado novo em `skills.ts` foi necessário — é a mesma fonte (`SKILLS`) e o mesmo fluxo
 (`setState` → `renderVals()`) já usados pelo clique, só com dois caminhos de entrada a mais.
 
+**Contraste e cor por ramo.** Duas correções de design sobre a primeira versão do terminal:
+
+- O campo de digitação era um `<input>` com fundo transparente sentado inline com texto de
+  prompt comum — em repouso, sem foco, ele lia como *mais texto de saída*, não como algo
+  clicável. Agora é uma caixa com borda e fundo tingido (`rgba(var(--rgb-accent),.1)`, borda
+  `rgba(var(--rgb-accent),.55)`) + um ícone `›`, sempre visível, não só ao focar — a intenção é
+  que dê pra perceber "dá pra digitar aqui" antes mesmo de tocar na página.
+- A lista de comandos e a saída da doc usavam `var(--color-accent)` fixo em todo lugar
+  (`TerminalCommand.color`, `SelectionView.branchColor`/`branchRgb`) — toda peça, de qualquer
+  ramo, saía na mesma cor laranja, apesar da legenda no topo (IA/Web/Dados) já anunciar três
+  cores distintas. Agora o `id` de cada linha, o rótulo de ramo, a barra de nível e a borda
+  esquerda do painel de saída seguem a cor do ramo daquela peça especificamente (laranja/IA,
+  âmbar/Web, aço/Dados) — a mesma lógica de cor que já existia (`BRANCH[b].color`), só que
+  finalmente propagada até o fim, em vez de parar na legenda.
+
 ### Onde editar o quê
 
 Depois de qualquer mudança em `src/`, rode `npm run build`.
