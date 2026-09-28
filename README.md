@@ -223,14 +223,9 @@ bundle específico, não a de identificadores.
 (Warm Forge/Cold Steel), ver [Idioma e tema](#idioma-e-tema).
 
 1. **Hero — etapa 01 · planta.** Título "Oficina Digital", painel emoldurado com a cena da lousa.
-2. **Bancada de IA — etapa 02.** Árvore de habilidades clicável; nós e ligações vêm de
-   `SKILLS` / `EDGES` na classe de lógica, desenhados num canvas de 800×660 escalado
-   (`transform: scale()`) pra preencher o frame em qualquer largura/zoom de desktop. Abaixo de
-   720px o canvas dá lugar a `#ia-mobile-groups`: um acordeão por ramo (IA/Web/Dados), lista
-   vertical nativa ao toque — sem drag, sem canvas. O painel de detalhe (`<aside>`, ao lado do
-   canvas no desktop e abaixo do acordeão no mobile) também é um terminal: digitar o nome/id de
-   uma peça (`react`, `rag`, `docker`…) explica a peça ao vivo, sem precisar clicar num nó —
-   ver "Terminal da Bancada de IA" logo abaixo.
+2. **Bancada de IA — etapa 02.** Um terminal dedicado, não um grafo de nós — ver "Terminal da
+   Bancada de IA" logo abaixo. Mesmo markup em qualquer largura (o layout de duas colunas vira
+   uma coluna só abaixo de 720px via CSS, sem precisar de um segundo DOM pra mobile).
 3. **O jogo do seu projeto — etapa 03.** Esteira com os 5 tipos de produto que André constrói
    (`PRODUCT_TYPES`) com painel de detalhe e um CTA de WhatsApp com mensagem pré-preenchida.
    Abaixo de 720px a esteira dá lugar a `#esteira-carousel`: um carrossel de cards deslizável
@@ -243,27 +238,42 @@ bundle específico, não a de identificadores.
 
 ### Terminal da Bancada de IA
 
-O painel de detalhe da Bancada de IA (`<aside>`, o mesmo em desktop e mobile) é uma janela de
-terminal de verdade, não uma caixa de card com um input dentro: cantos retos (exceção
-deliberada — todo o resto da página mantém raio suave; este painel precisa ler como um *tipo*
-de objeto diferente), borda com glow pulsante (`termGlow`) em vez de sombra suave, barra de
-título estilo status de sistema (`root@oficina-digital:~/bancada-ia` + indicador "REC"
-piscante) e **monoespaçado do início ao fim** — inclusive os rótulos de campo, que uma saída de
-terminal de verdade nunca troca de fonte no meio. O nível de habilidade também virou uma barra
-ASCII de verdade (`asciiLevelBar()`, `'████████░░'`), não uma `<div>` com gradiente CSS.
+A etapa 02 inteira **é** um terminal — não um grafo de nós com uma busca ao lado. Versões
+anteriores tentaram isso (canvas de skill tree + acordeão mobile, depois canvas + painel de
+busca) e nenhuma lia como terminal de verdade; esta foi reconstruída do zero como uma única
+janela, sem canvas, sem SVG de conexões, sem posicionamento `x`/`y`/`t` em `skills.ts`.
+
+Estrutura (mesmo markup em qualquer largura — o corpo de duas colunas colapsa pra uma só
+coluna abaixo de 720px via `#ia-terminal-body { grid-template-columns: 1fr }`, sem precisar de
+um segundo DOM pra mobile):
+
+- **Barra de título** — status de sistema (`root@oficina-digital:~/bancada-ia` + indicador
+  "REC" piscante), não dots de macOS.
+- **Prompt** (`root@oficina-digital:~$` + `<input>` nativo) com dica sempre visível (não um
+  placeholder que some ao focar) convidando a digitar e a usar Tab.
+- **Lista de comandos** (`$ help --list-skills`) — `SKILLS` agrupado por ramo, cada peça uma
+  linha clicável `id  label`, como a saída de um `--help`.
+- **Saída da doc** (`$ man <id>`) — nome, ramo, nível (barra ASCII de verdade,
+  `asciiLevelBar()`, `'████████░░'`, não uma `<div>` com gradiente CSS) e, explicitamente
+  rotulado "o que isso significa aqui", a descrição da peça no contexto do portfólio.
+
+Cantos retos (exceção deliberada — todo o resto da página mantém raio suave; este painel
+precisa ler como um *tipo* de objeto diferente) e borda com glow pulsante (`termGlow`) em vez
+de sombra suave. **Monoespaçado do início ao fim** — inclusive os rótulos de campo, que uma
+saída de terminal de verdade nunca troca de fonte no meio.
 
 - **Digitar** (`handleTerminalInput`, `onChange`) casa por `id` ou pelo `label` localizado,
-  substring, sem diferenciar acento/maiúscula (`matchSkill()`), e atualiza o painel ao vivo —
-  com prioridade sobre o último nó clicado enquanto o texto casar com alguma peça. Sem match, um
-  aviso apagado aparece em vez de deixar o painel "travado" num estado antigo.
+  substring, sem diferenciar acento/maiúscula (`matchSkill()`), e atualiza a saída da doc ao
+  vivo — com prioridade sobre a última peça clicada enquanto o texto casar com alguma. Sem
+  match, um aviso apagado aparece em vez de deixar o painel "travado" num estado antigo.
 - **Tab** (`handleTerminalKeyDown`, `onKeyDown`) completa o texto digitado — prefixo, não
   substring, igual a um shell de verdade: `completeSkillQuery()` procura primeiro por `label`
   (o que a pessoa realmente está digitando: "reac" → "React"), com fallback pro `id` só pros
   poucos casos em que ele não é um prefixo do próprio label (`pg` → "PostgreSQL", `ux` → "UI de
   produto"). `preventDefault()` só roda quando há de fato algo pra completar — sem match, o Tab
   volta a mover o foco normalmente, sem prender o teclado à toa.
-- **Clicar um nó** continua funcionando sempre e limpa o campo de busca (o clique sempre vence
-  sobre uma busca digitada anterior).
+- **Clicar uma peça na lista** continua funcionando sempre e limpa o campo de busca (o clique
+  sempre vence sobre uma busca digitada anterior).
 
 Nenhum estado novo em `skills.ts` foi necessário — é a mesma fonte (`SKILLS`) e o mesmo fluxo
 (`setState` → `renderVals()`) já usados pelo clique, só com dois caminhos de entrada a mais.
@@ -277,10 +287,10 @@ Depois de qualquer mudança em `src/`, rode `npm run build`.
 | Tipos de produto (título, explicação, exemplos, pra quem é, prazo) | `src/data/product-types.ts` |
 | Texto de UI (labels de seção, CTAs, chrome do modal, rodapé) — PT e EN | `src/data/translations.ts` |
 | Linhas da sequência de boot (PT e EN) | `src/data/translations.ts` (`bootLine1..4`, `bootReady`) |
-| Cor/densidade/velocidade da chuva digital (`<matrix-rain>`) | atributos inline no `.dc.html` (dentro de `#ia-canvas`) |
+| Cor/densidade/velocidade da chuva digital (`<matrix-rain>`) | atributos inline no `.dc.html` (dentro do terminal da Bancada de IA) |
 | Cor de tema (Warm Forge e Cold Steel) | tokens `:root` / `html[data-theme="alternate"]` no `<helmet><style>` do `.dc.html` |
 | Número/mensagens do WhatsApp | `src/logic/whatsapp.ts` (CTA dinâmico do jogo do projeto); os outros 3 CTAs de WhatsApp são estáticos, direto no `.dc.html` |
-| Habilidades da árvore e suas ligações | `src/data/skills.ts` |
+| Peças/comandos do terminal da Bancada de IA | `src/data/skills.ts` |
 | Projetos (título, stack, problema, resultado, desafios, mapeamento, evolução, cor) | `src/data/projects.ts` |
 | Link de repositório de um projeto | `repoUrl` em `src/data/projects.ts` — **opcional**: omitido (não `undefined` explícito, `exactOptionalPropertyTypes` não deixa) para trabalho de cliente com código privado, e o botão "Ver repositório" do modal some sozinho (`<sc-if value="{{ activeProject.repoUrl }}">`, mesmo padrão do `liveUrl`) |
 | Capa de um projeto — logo oficial, screenshot real, ou ilustração | `src/data/projects.ts`: `logo` (path) para uma logo transparente ou `logo` + `logoIsScreenshot: true` para uma captura de tela real; `illustration` (uma `IllustrationKey`) só quando não há nenhuma das duas ainda. Ver `coverKind` em `component.ts` e "Componentes" abaixo |
@@ -402,7 +412,7 @@ tema muda. Se um dia trocar esses atributos por hex direto o probe vira no-op �
 desnecessário.
 
 **`<matrix-rain rgb-var bg-rgb-var font-size density speed max-opacity>`** — camada de "chuva
-digital" decorativa, hoje usada só como fundo da tela do canvas da Bancada de IA (`#ia-canvas`).
+digital" decorativa, hoje usada só como fundo do terminal da Bancada de IA.
 `rgb-var`/`bg-rgb-var` recebem o **nome** de uma custom property já no formato "r, g, b" (ex.:
 `--rgb-branch-ia`, `--rgb-bg-panel` — ver Paleta), não um `var(...)` nem um hex: como essas
 tokens já são um triplet plano, o componente só precisa de `getComputedStyle(...).getPropertyValue(name)`

@@ -44,67 +44,42 @@ export interface Branch {
   label: I18nString;
 }
 
-/** One node in the "Bancada de IA" skill tree. */
+/** One entry ("command") in the Bancada de IA terminal's skill set. */
 export interface Skill {
   id: string;
   label: I18nString;
   kind: I18nString;
-  /** Which branch this node belongs to — drives its color via `BRANCH[b]`. */
+  /** Which branch this command belongs to — drives its color via `BRANCH[b]`. */
   b: BranchId;
-  /** Position as a percentage of the tree's bounding box (0–100). */
-  x: number;
-  y: number;
-  /** Tier — 0 is the root, higher tiers sit further from center; also staggers the pop-in animation delay. */
-  t: number;
   /** Skill level, 0–100. */
   lvl: number;
   desc: I18nString;
 }
 
-/** A directed edge between two `Skill.id`s, drawn as a connecting line. */
-export type Edge = readonly [from: string, to: string];
-
-/** A `Skill` node, localized to the active language, with its computed inline `style` string for the current selection state. */
-export interface SkillWithStyle extends Localized<Skill> {
-  style: string;
-}
-
 /**
- * One `Skill` as shown in the mobile "Mapa de IA" — a plain tap target inside
- * a branch's accordion list, not a canvas node, so it drops the (x, y, t)
- * layout fields `SkillWithStyle` needs and adds only what a list row reads.
+ * One `Skill` as listed in the terminal's `$ help` output — a plain,
+ * clickable command-list row (see `<button data-skill>` in the `.dc.html`),
+ * not a canvas node.
  */
-export interface MobileSkillItem {
+export interface TerminalCommand {
   id: string;
   label: string;
-  kind: string;
-  desc: string;
-  lvl: number;
+  /** Highlighted when this is the currently-displayed skill (`sel.id`) —
+   *  true whether it got there by a click or by a matching typed query. */
   active: boolean;
   /** Computed inline style for the row — branch-colored highlight when `active`. */
   style: string;
 }
 
 /**
- * One branch's worth of `MobileSkillItem`s, grouped for the mobile
- * accordion-by-branch layout (see `<details id="ia-mobile-groups">` in the
- * `.dc.html` and the "Mapa mobile" decision it implements — no drag, no
- * canvas coordinates, just a vertical list a thumb can scroll).
+ * One branch's worth of `TerminalCommand`s, grouped under a `# ramo …`
+ * heading in the terminal's command list.
  */
-export interface MobileBranchGroup {
+export interface TerminalCommandGroup {
   id: BranchId;
   label: string;
   color: string;
-  skills: readonly MobileSkillItem[];
-}
-
-/** A rendered connector line between two skill nodes. */
-export interface RenderedLink {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-  color: string;
+  commands: readonly TerminalCommand[];
 }
 
 /**
