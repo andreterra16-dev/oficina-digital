@@ -215,6 +215,14 @@ function completeSkillQuery(query: string, lang: 'pt' | 'en'): string | undefine
   return byId && byId.id !== q ? byId.id : undefined;
 }
 
+/** Renders a 0–100 level as a 10-block ASCII bar (`'████████░░'`) — real
+ *  terminal output (htop, a progress bar in a CI log) prints characters,
+ *  never a CSS gradient div, so the Bancada de IA terminal panel does too. */
+function asciiLevelBar(lvl: number): string {
+  const filled = Math.max(0, Math.min(10, Math.round((lvl / 100) * 10)));
+  return '█'.repeat(filled) + '░'.repeat(10 - filled);
+}
+
 function computeLinkCoords(): Array<{ x1: number; y1: number; x2: number; y2: number }> {
   const byId: Record<string, Skill> = {};
   SKILLS.forEach((s) => { byId[s.id] = s; });
@@ -722,6 +730,7 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
         branchLabel: BRANCH[sel.b].label[lang],
         desc: sel.desc[lang],
         levelPct: sel.lvl + '%',
+        levelBar: asciiLevelBar(sel.lvl),
         levelLabel: sel.lvl >= 85
           ? (lang === 'pt' ? 'avançado' : 'advanced')
           : sel.lvl >= 74

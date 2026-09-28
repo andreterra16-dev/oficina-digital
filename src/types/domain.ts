@@ -164,6 +164,9 @@ export interface SelectionView {
   branchLabel: string;
   desc: string;
   levelPct: string;
+  /** The level, as a 10-block ASCII bar (`'████████░░'`) — terminal output
+   *  doesn't render a CSS gradient div, it prints characters. */
+  levelBar: string;
   /** Localized display label — no downstream logic branches on its literal
    *  value, so a plain `string` (rather than a closed PT/EN union) is the
    *  right type once it's resolved to the active language. */

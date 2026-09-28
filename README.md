@@ -244,11 +244,13 @@ bundle específico, não a de identificadores.
 ### Terminal da Bancada de IA
 
 O painel de detalhe da Bancada de IA (`<aside>`, o mesmo em desktop e mobile) é uma janela de
-terminal de verdade, não só um input estilizado: barra de título com os 3 pontos + path falso
-(`visitante@oficina:~/bancada-ia`, mesmo vocabulário visual do chrome de terminal dos cards de
-projeto), um prompt `visitante@oficina:~$` com `<input>` nativo, uma dica sempre visível (não só
-um placeholder que some ao focar) convidando a digitar e a usar Tab, e o conteúdo abaixo
-reenquadrado como a "saída impressa" do comando (borda esquerda, eco `$ skill <id>`).
+terminal de verdade, não uma caixa de card com um input dentro: cantos retos (exceção
+deliberada — todo o resto da página mantém raio suave; este painel precisa ler como um *tipo*
+de objeto diferente), borda com glow pulsante (`termGlow`) em vez de sombra suave, barra de
+título estilo status de sistema (`root@oficina-digital:~/bancada-ia` + indicador "REC"
+piscante) e **monoespaçado do início ao fim** — inclusive os rótulos de campo, que uma saída de
+terminal de verdade nunca troca de fonte no meio. O nível de habilidade também virou uma barra
+ASCII de verdade (`asciiLevelBar()`, `'████████░░'`), não uma `<div>` com gradiente CSS.
 
 - **Digitar** (`handleTerminalInput`, `onChange`) casa por `id` ou pelo `label` localizado,
   substring, sem diferenciar acento/maiúscula (`matchSkill()`), e atualiza o painel ao vivo —

@@ -51,7 +51,6 @@ export const TRANSLATIONS: Record<string, I18nString> = {
   workbenchParagraph: { pt: 'O ramo de IA é a peça central da bancada, alimentado por uma base sólida de web e dados. Clique em qualquer nó para ver o que ele faz na prática.', en: 'The AI branch is the central piece of the workbench, powered by a solid base of web and data. Click on any node to see what it does in practice.' },
   workbenchLegendIa: { pt: 'IA', en: 'AI' },
   workbenchSchemeLabel: { pt: 'esquema · ferramental', en: 'schema · tooling' },
-  workbenchAsideLabel: { pt: 'Peça selecionada', en: 'Selected piece' },
   workbenchAsideDomain: { pt: 'Domínio', en: 'Domain' },
   workbenchBranchDados: { pt: 'Dados & infra', en: 'Data & Infra' },
   workbenchCard1Title: { pt: 'Como eu aplico IA', en: 'How I apply AI' },
@@ -61,8 +60,9 @@ export const TRANSLATIONS: Record<string, I18nString> = {
   workbenchCard3Title: { pt: 'Entrega', en: 'Delivery' },
   workbenchCard3Desc: { pt: 'Do protótipo ao deploy: interface em Next.js, API em Node, dados em PostgreSQL, tudo containerizado com Docker.', en: 'From prototype to deploy: Next.js frontend, Node API, PostgreSQL data, all containerized with Docker.' },
   workbenchTerminalPlaceholder: { pt: 'ex.: react, docker…', en: 'e.g.: react, docker…' },
-  workbenchTerminalHint: { pt: 'digite o nome de uma peça e pressione Tab pra completar — ou clique num nó', en: "type a piece's name and press Tab to complete it — or click a node" },
+  workbenchTerminalHint: { pt: 'digite o nome de uma peça · [TAB] completa · [CLIQUE] num nó também funciona', en: "type a piece's name · [TAB] completes · [CLICK] a node also works" },
   workbenchTerminalNotFound: { pt: 'termo não encontrado — tente outro ou clique num nó', en: 'term not found — try another, or click a node' },
+  workbenchTerminalFieldName: { pt: 'nome', en: 'name' },
 
   // "jogo do seu projeto" (projects) section
   projectsStage: { pt: 'Etapa 03 · o jogo do seu projeto', en: "Stage 03 · your project's game" },
