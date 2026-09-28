@@ -134,23 +134,50 @@
   pixel-reveal { display: block; position: relative; overflow: hidden; }
   ascii-cursor { display: block; position: fixed; inset: 0; z-index: 70; pointer-events: none; }
   matrix-rain { display: block; position: absolute; inset: 0; z-index: 0; pointer-events: none; }
-  /* Sticker-peel corner — project cards only. A folded dog-ear that grows
-     and casts a shadow inward (toward the card) on hover/focus, like the
-     corner of a sticker lifting off the artboard. Offset is deliberately
-     inward so the drop-shadow never spills past the card's own
-     border-radius:6px + overflow:hidden clip. */
+  /* Cover-peel corner — project cards only. A folded dog-ear in the
+     project's own accent color (`--fold-rgb`, set inline on `.project-cover`
+     — the card's image wrapper — from `p.colorRgb`) that unfolds from the
+     top-right corner of the cover image on hover/focus, like the corner of
+     the project's own cover lifting to peek out from under the screenshot
+     — not a generic sticker, a specific one per project. Lives on
+     `.project-cover` (a plain, statically-named class) rather than
+     `article[data-project]` itself: this template's `style-hover` attribute
+     compiles to a synthesized `:hover` class rule, and combining that with
+     an inline custom property (`--fold-rgb`) on the *same* element silently
+     dropped the article's entire base inline style — the whole card
+     rendered unstyled. `.project-cover` carries the custom property on its
+     own plain `style=`, with no `style-hover` anywhere near it, and the
+     hover trigger is a separate CSS rule below keyed off the *article*
+     hovering, not the cover — a real "descendant reacts when its ancestor
+     is hovered" rule, which `style-hover` (self-hover only) can't express
+     anyway.
+
+     Sized at its final 54×54 from the start and animated with
+     `transform:scale()` from a `top right` origin (not `width`/`height`,
+     which trigger layout every frame) — only `transform`/`filter` change,
+     both compositor-only, so this costs nothing beyond the one paint of
+     the folded shape itself. The overshoot easing is the same
+     `cubic-bezier(.34,1.56,.4,1)` the like-button pop already uses
+     elsewhere in this file — one "something just popped into place" curve
+     for the whole site, not a bespoke one per element. It lives on the
+     cover image specifically (not the full card) so the drop-shadow never
+     spills past that wrapper's own `overflow:hidden`. */
   article[data-project] { position: relative; }
-  article[data-project]::after {
-    content: ''; position: absolute; top: 0; right: 0; width: 0; height: 0;
-    background: var(--color-text-main);
+  .project-cover::after {
+    content: ''; position: absolute; top: 0; right: 0; width: 54px; height: 54px;
+    background:
+      linear-gradient(135deg, rgba(255,255,255,.4) 0%, transparent 20%),
+      linear-gradient(135deg, rgba(var(--fold-rgb),1) 0%, rgba(var(--fold-rgb),.6) 100%);
     clip-path: polygon(0 0, 100% 0, 100% 100%);
-    transition: width .45s cubic-bezier(.16,1,.3,1), height .45s cubic-bezier(.16,1,.3,1), filter .45s;
+    transform: scale(0); transform-origin: top right;
+    transition: transform .5s cubic-bezier(.34,1.56,.4,1), filter .4s ease;
     pointer-events: none; z-index: 6;
     filter: drop-shadow(-2px 3px 2px rgba(0,0,0,0));
   }
-  article[data-project]:hover::after, article[data-project]:focus-within::after {
-    width: 46px; height: 46px;
-    filter: drop-shadow(-4px 6px 7px rgba(0,0,0,.55));
+  article[data-project]:hover .project-cover::after,
+  article[data-project]:focus-within .project-cover::after {
+    transform: scale(1);
+    filter: drop-shadow(-5px 7px 9px rgba(0,0,0,.6));
   }
   @keyframes ringSpin { to { transform: rotate(360deg); } }
   @keyframes ringSpinBack { to { transform: rotate(-360deg); } }
@@ -303,9 +330,24 @@
        icon only — still fully functional (state and click target unchanged,
        see toggleLike/likeBtnStyle in src/logic/component.ts), just without
        the redundant count label at a width that can't afford it. */
-    #modal-title-block { right: 64px !important; }
+    #modal-title-block { right: 64px !important; background: rgba(var(--rgb-bg-base),.7) !important; padding: 10px 12px !important; border-radius: 4px !important; left: 16px !important; }
     #modal-like-btn { right: 16px !important; padding: 9px !important; }
     #modal-like-count { display: none !important; }
+    /* Mobile modal cover: `fit="contain"` logos are designed for the
+       desktop crop's wide aspect ratio (940×250) — at phone width the same
+       250px-tall box is nearly square instead, so a wide logo lockup (mark
+       + wordmark + tagline) renders much larger within it and can sit
+       right where the title block overlays it, fighting for contrast
+       against the gradient scrim alone. A solid chip behind the title text
+       (above) guarantees legibility regardless of what's under it, and a
+       shorter cover height leaves less room for the logo to intrude in
+       the first place. */
+    #modal-cover { height: 180px !important; }
+    /* Problema/Resultado: a fixed 2-column grid at any width crushes each
+       column to single-word line wrapping on a phone. Stack them — same
+       "let two columns become one" pattern already used for
+       #sobre-grid/#contato-grid/#projetos-grid at this breakpoint. */
+    #modal-problem-result { grid-template-columns: 1fr !important; gap: 22px !important; }
   }
   @media (max-width: 480px) {
     header { padding-left: 18px !important; padding-right: 18px !important; }
@@ -763,7 +805,7 @@
             <span style="width:7px;height:7px;border-radius:50%;background:var(--color-support-steel);flex:none"></span>
             <span style="margin-left:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">~/projetos/{{ p.id }}.tsx</span>
           </div>
-          <div style="position:relative;height:186px;overflow:hidden">
+          <div class="project-cover" style="position:relative;height:186px;overflow:hidden;--fold-rgb:{{ p.colorRgb }}">
             <!-- No `src` here — see _applyCoverSrc()'s doc comment in
                  component.ts for why: the same "raw template is the first
                  paint" issue as the connector lines above, but for a real
@@ -938,7 +980,7 @@
       <div onClick="{{ stopPropagation }}" style="position:relative;width:min(940px,100%);max-height:90vh;overflow-y:auto;border-radius:8px;border:1px solid rgba({{ activeProject.colorRgb }},.4);background:linear-gradient(165deg,var(--color-bg-elevated-alt),var(--color-bg-panel));box-shadow:0 60px 120px -40px rgba(0,0,0,.85),0 0 0 1px rgba({{ activeProject.colorRgb }},.12);animation:modalRise .45s cubic-bezier(.16,1,.3,1) both">
         <button type="button" onClick="{{ closeProject }}" aria-label="{{ t.projectModalClose }}" style="position:absolute;top:18px;right:18px;z-index:3;width:36px;height:36px;border-radius:50%;border:1px solid rgba(var(--rgb-text-main),.22);background:rgba(var(--rgb-bg-base),.75);color:var(--color-text-main);cursor:pointer;font-size:17px;line-height:1;display:grid;place-items:center" style-hover="background:var(--color-accent);color:var(--color-bg-base);border-color:var(--color-accent)">×</button>
 
-        <div style="position:relative;height:250px;overflow:hidden">
+        <div id="modal-cover" style="position:relative;height:250px;overflow:hidden">
           <sc-if value="{{ activeProject.coverKind === 'logo' }}">
             <div style="position:absolute;inset:0;background:linear-gradient(150deg,#F4EFE4,#E9E0CC)">
               <image-slot id="{{ activeProject.slot }}" data-cover-for="{{ activeProject.id }}" shape="rect" fit="contain" placeholder="{{ activeProject.placeholder }}"></image-slot>
@@ -958,7 +1000,7 @@
           <div id="modal-title-block" style="position:absolute;left:32px;bottom:22px;right:170px">
             <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:{{ activeProject.color }}">{{ activeProject.badge }}</div>
             <h3 style="margin:9px 0 0;font-size:clamp(22px,6vw,38px);letter-spacing:-.03em;font-weight:600;color:var(--color-text-main);font-stretch:106%">{{ activeProject.title }}</h3>
-            <p style="margin:7px 0 0;font-size:14.5px;color:var(--color-text-soft)">{{ activeProject.subtitle }}</p>
+            <p id="modal-subtitle" style="margin:7px 0 0;font-size:14.5px;color:var(--color-text-soft);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2">{{ activeProject.subtitle }}</p>
           </div>
           <button id="modal-like-btn" type="button" onClick="{{ toggleLike }}" data-like="{{ activeProject.id }}" style="position:absolute;right:32px;bottom:22px;{{ activeProject.likeBtnStyle }}padding:10px 16px;font-size:13px" style-hover="transform:translateY(-2px)">
             <span style="pointer-events:none;font-size:16px">{{ activeProject.likeIcon }}</span>
@@ -973,7 +1015,7 @@
             </sc-for>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:26px">
+          <div id="modal-problem-result" style="display:grid;grid-template-columns:1fr 1fr;gap:26px">
             <div>
               <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-text-muted)">{{ t.projectModalProblem }}</div>
               <p style="margin:9px 0 0;font-size:15px;line-height:1.7;color:var(--color-text-soft);text-wrap:pretty">{{ activeProject.problem }}</p>

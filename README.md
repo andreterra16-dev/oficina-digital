@@ -230,9 +230,15 @@ bundle específico, não a de identificadores.
    (`PRODUCT_TYPES`) com painel de detalhe e um CTA de WhatsApp com mensagem pré-preenchida.
    Abaixo de 720px a esteira dá lugar a `#esteira-carousel`: um carrossel de cards deslizável
    (`scroll-snap` nativo) com indicador de bolinhas, cada card já autocontido (explicação,
-   exemplos, pra quem é, prazo, CTA). Abaixo, os cartões de projeto entregues, cada um com
-   modal individual (problema, resultado, desafios técnicos, estratégia de mapeamento e
-   evolução).
+   exemplos, pra quem é, prazo, CTA). Abaixo, os cartões de projeto entregues — cada um com um
+   canto dobrado na cor do próprio projeto (`.project-cover::after`, `p.colorRgb`) que se abre ao
+   passar o mouse, como a capa do projeto espiando por baixo do screenshot — e modal individual
+   (problema, resultado, desafios técnicos, estratégia de mapeamento e evolução). No modal, abaixo
+   de 720px o cabeçalho ganha um chip escuro sólido atrás do título (a logo/screenshot de capa foi
+   desenhada pro recorte bem mais largo do desktop; numa caixa quase quadrada de telefone ela
+   ocupa mais espaço vertical e pode brigar com o texto por cima só do gradiente) e Problema/
+   Resultado empilham em uma coluna (`#modal-problem-result`), em vez de espremer duas colunas
+   numa tela estreita.
 4. **Sobre — etapa 04 · acabamento.** Texto de posicionamento e números.
 5. **Contato — entrega.** E-mail, LinkedIn, rodapé.
 
@@ -458,6 +464,17 @@ valores por JavaScript, o runtime reescreve o atributo `style` a cada render.
 - Toda lógica (estado, handlers, dados) fica na classe `Component`; o template só consome
   valores já prontos por nome. A fonte dessa lógica é `src/logic/component.ts`, o bloco
   `<script data-dc-script>` no `.dc.html` é gerado a partir dela, não editado à mão.
+- **Nunca combine uma custom property (`--algo:valor`) com `style-hover` no mesmo elemento.**
+  `style-hover` faz o runtime sintetizar uma regra `.scpN:hover { ... !important }` a partir do
+  `style` do elemento — e, ao processar um elemento que também carrega uma custom property no
+  próprio `style`, ele descarta o `style` base inteiro silenciosamente (sem erro no console; o
+  elemento só renderiza sem nenhum dos estilos declarados). Precisa de uma cor/valor por
+  instância (por projeto, por skill etc.) num elemento que também tem `style-hover`? Coloque a
+  custom property num elemento **filho ou irmão sem `style-hover`** e resolva a interação via uma
+  regra CSS de descendência normal (`.pai:hover .filho::after { ... }`) — foi assim que o
+  "cover-peel corner" dos cards de projeto (ver `.project-cover::after` no `<helmet><style>`)
+  resolveu precisar da cor de cada projeto (`p.colorRgb`) sem quebrar o `style-hover` que já
+  existia no `<article>` (o lift `transform:translateY(-6px)` ao passar o mouse).
 
 </details>
 
