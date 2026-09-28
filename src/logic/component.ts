@@ -31,7 +31,7 @@ import { projectHasIllustration } from '../types/domain';
 // needed for *type* positions like `RefObject<...>` and `MouseEvent`,
 // which a bare `declare const React: typeof import('react')` value
 // doesn't expose as a namespace.
-import type { MouseEvent as ReactMouseEvent, ReactElement, RefObject, SyntheticEvent } from 'react';
+import type { ChangeEvent, MouseEvent as ReactMouseEvent, ReactElement, RefObject, SyntheticEvent } from 'react';
 
 /** Finds the nearest ancestor (inclusive) of the click target matching `selector`. */
 function closestFromTarget(ev: SyntheticEvent, selector: string): HTMLElement | null {
@@ -76,6 +76,11 @@ interface RenderVals {
   productTypes: readonly ProductTypeWithStyle[];
   product: ProductTypeView;
   sel: SelectionView;
+  /** True once the Bancada de IA terminal query is long enough to be a
+   *  real attempt (≥2 normalized chars) and still matches no skill. */
+  terminalNotFound: boolean;
+  handleTerminalInput: (ev: ChangeEvent<HTMLInputElement>) => void;
+  terminalQuery: string;
   logoMarkHeader: ReactElement;
   logoMarkFooter: ReactElement;
   logoMarkStamp: ReactElement;
@@ -171,6 +176,24 @@ function fitToFrame(frame: HTMLElement | null, inner: HTMLElement | null, design
  *  still template-bound — a color string was never the problem) and
  *  `_applyLinkCoords()` (which sets the real `x1`/`y1`/`x2`/`y2` — see that
  *  method's doc comment for why those aren't template-bound any more). */
+/** Lowercases and strips diacritics, so "aç" and "rag" both match "RAG &
+ *  Embeddings" regardless of accent/case — visitors typing a skill name
+ *  into the Bancada de IA terminal shouldn't need exact capitalization. */
+function normalizeQuery(value: string): string {
+  return value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+/** Finds the `Skill` a typed terminal query names, by `id` or by its
+ *  localized `label` (both substring matches) — or `undefined` when the
+ *  query is too short to be meaningful (< 2 normalized characters) or
+ *  matches nothing. Shared by `renderVals()` (to pick `sel`) and the
+ *  "not found" hint it derives alongside it. */
+function matchSkill(query: string, lang: 'pt' | 'en'): Skill | undefined {
+  const q = normalizeQuery(query);
+  if (q.length < 2) return undefined;
+  return SKILLS.find((s) => normalizeQuery(s.id).includes(q) || normalizeQuery(s.label[lang]).includes(q));
+}
+
 function computeLinkCoords(): Array<{ x1: number; y1: number; x2: number; y2: number }> {
   const byId: Record<string, Skill> = {};
   SKILLS.forEach((s) => { byId[s.id] = s; });
@@ -183,6 +206,7 @@ function computeLinkCoords(): Array<{ x1: number; y1: number; x2: number; y2: nu
 class Component extends DCLogic<ComponentProps, ComponentState> {
   override state: ComponentState = {
     skill: 'ia',
+    terminalQuery: '',
     productIndex: 0,
     project: null,
     likes: loadLikes(),
@@ -421,7 +445,20 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     const btn = closestFromTarget(ev, '[data-skill]');
     const id = btn?.getAttribute('data-skill');
     if (!id) return;
-    this.setState({ skill: id });
+    // Clearing `terminalQuery` here means a click always wins over whatever
+    // was previously typed — otherwise a stale typed query still matching
+    // some *other* skill would keep overriding the just-clicked node in
+    // `renderVals()`'s `sel` (typed match takes priority — see there).
+    this.setState({ skill: id, terminalQuery: '' });
+  };
+
+  /** Bancada de IA terminal input — live, on every keystroke (`onChange`
+   *  fires per-input on a controlled `<input>`, same as native `input`).
+   *  Just records the typed text; `renderVals()` does the actual lookup
+   *  (`matchSkill`) so there's one source of truth for "what's selected"
+   *  shared with `pickSkill` above. */
+  handleTerminalInput = (ev: ChangeEvent<HTMLInputElement>): void => {
+    this.setState({ terminalQuery: ev.target.value });
   };
 
   openProject = (ev: ReactMouseEvent): void => {
@@ -572,7 +609,12 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
 
   override renderVals(): RenderVals {
     const lang = this.state.lang;
-    const sel = SKILLS.find((s) => s.id === this.state.skill) ?? SKILLS[1] ?? SKILLS[0];
+    // A typed terminal query that matches a skill wins over the last-clicked
+    // node — cleared on click (see `pickSkill`) so the two inputs never
+    // fight over which one is "current" for longer than a render.
+    const typedMatch = matchSkill(this.state.terminalQuery, lang);
+    const sel = typedMatch ?? SKILLS.find((s) => s.id === this.state.skill) ?? SKILLS[1] ?? SKILLS[0];
+    const terminalNotFound = normalizeQuery(this.state.terminalQuery).length >= 2 && !typedMatch;
     const byId: Record<string, Skill> = {};
     SKILLS.forEach((s) => { byId[s.id] = s; });
 
@@ -639,6 +681,7 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       }),
       product,
       sel: {
+        id: sel.id,
         label: sel.label[lang],
         branchLabel: BRANCH[sel.b].label[lang],
         desc: sel.desc[lang],
@@ -649,6 +692,9 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
             ? (lang === 'pt' ? 'sólido' : 'solid')
             : (lang === 'pt' ? 'em evolução' : 'evolving'),
       },
+      terminalNotFound,
+      handleTerminalInput: this.handleTerminalInput,
+      terminalQuery: this.state.terminalQuery,
       logoMarkHeader: logoMark(36, true, this.state.theme),
       logoMarkFooter: logoMark(26, false, this.state.theme),
       logoMarkStamp: logoMark(30, false, this.state.theme),

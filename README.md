@@ -84,10 +84,10 @@ Geração de leads e autoridade para consultoria nacional (franchising, valuatio
 <td><b>03</b></td>
 <td>
 
-**[Onboarding de Clientes Premium (IA)](https://salomao-onboarding.netlify.app/)**
-Wizard estratégico que transforma o briefing de um cliente em PDF consumido diretamente pelo time técnico, com direção visual de luxo discreto.
-`React` `Vite` `TypeScript`
-[repositório →](https://github.com/andreterra-lgtm/salomao-onboarding)
+**[Frutos de Goiás — Seja um Lojista](https://www.sejafrutosdegoias.com.br/)**
+Landing institucional de licenciamento (modelo 0% royalty) com calculadora de investimento embutida, construída sem framework — TypeScript vanilla modular, orçamento de 12KB de JS na home, Vitest + Playwright + axe-core (WCAG 2.2 AA).
+`TypeScript` `Vite` `Vitest` `Playwright` `Vercel Functions`
+Código privado — cliente Frutos de Goiás.
 
 </td>
 </tr>
@@ -95,10 +95,10 @@ Wizard estratégico que transforma o briefing de um cliente em PDF consumido dir
 <td><b>04</b></td>
 <td>
 
-**[Calculadora de Valuation](https://salomaosantosvaluation.netlify.app/)**
-Avaliação empresarial 100% client-side: Berkus + Scorecard, múltiplos de EBITDA e DCF no mesmo produto, sem dado financeiro sensível trafegando pela rede.
-`React 19` `TypeScript` `Zustand` `Zod` `Tailwind CSS 4` `Vitest`
-[repositório →](https://github.com/andreterra-lgtm/VALUATION)
+**[Catálogo Lojas Cuiabá — Frutos de Goiás](https://lojascuiaba.frutosdegoiasmt.com.br/)**
+Diretório das 8 lojas da distribuidora em Cuiabá-MT, com página própria por loja (WhatsApp, rota, compartilhar), painel interno com QR codes para marketing, sitemap e dado estruturado schema.org.
+`React 19` `React Router 8` `TypeScript` `Vite` `Vercel`
+Código privado — cliente Frutos de Goiás.
 
 </td>
 </tr>
@@ -227,7 +227,10 @@ bundle específico, não a de identificadores.
    `SKILLS` / `EDGES` na classe de lógica, desenhados num canvas de 800×660 escalado
    (`transform: scale()`) pra preencher o frame em qualquer largura/zoom de desktop. Abaixo de
    720px o canvas dá lugar a `#ia-mobile-groups`: um acordeão por ramo (IA/Web/Dados), lista
-   vertical nativa ao toque — sem drag, sem canvas.
+   vertical nativa ao toque — sem drag, sem canvas. O painel de detalhe (`<aside>`, ao lado do
+   canvas no desktop e abaixo do acordeão no mobile) também é um terminal: digitar o nome/id de
+   uma peça (`react`, `rag`, `docker`…) explica a peça ao vivo, sem precisar clicar num nó —
+   ver "Terminal da Bancada de IA" logo abaixo.
 3. **O jogo do seu projeto — etapa 03.** Esteira com os 5 tipos de produto que André constrói
    (`PRODUCT_TYPES`) com painel de detalhe e um CTA de WhatsApp com mensagem pré-preenchida.
    Abaixo de 720px a esteira dá lugar a `#esteira-carousel`: um carrossel de cards deslizável
@@ -237,6 +240,18 @@ bundle específico, não a de identificadores.
    evolução).
 4. **Sobre — etapa 04 · acabamento.** Texto de posicionamento e números.
 5. **Contato — entrega.** E-mail, LinkedIn, rodapé.
+
+### Terminal da Bancada de IA
+
+O painel de detalhe da Bancada de IA (`<aside>`, o mesmo em desktop e mobile) tem uma linha de
+comando (`$` + `<input>` nativo) acima do conteúdo já existente. Digitar o nome ou id de uma
+peça (por `id` ou pelo `label` localizado, substring, sem diferenciar acento/maiúscula —
+`matchSkill()` em `component.ts`) atualiza o painel ao vivo, com prioridade sobre o último nó
+clicado enquanto o texto casar com alguma peça; um termo sem match mostra um aviso apagado em
+vez de deixar o painel "travado" num estado antigo. Clicar um nó continua funcionando like
+sempre e limpa o campo de busca (para o clique sempre vencer sobre uma busca anterior). Nenhum
+estado novo em `skills.ts` foi necessário — é a mesma fonte (`SKILLS`) e o mesmo fluxo
+(`setState` → `renderVals()`) já usados pelo clique, só com um segundo caminho de entrada.
 
 ### Onde editar o quê
 
@@ -252,6 +267,7 @@ Depois de qualquer mudança em `src/`, rode `npm run build`.
 | Número/mensagens do WhatsApp | `src/logic/whatsapp.ts` (CTA dinâmico do jogo do projeto); os outros 3 CTAs de WhatsApp são estáticos, direto no `.dc.html` |
 | Habilidades da árvore e suas ligações | `src/data/skills.ts` |
 | Projetos (título, stack, problema, resultado, desafios, mapeamento, evolução, cor) | `src/data/projects.ts` |
+| Link de repositório de um projeto | `repoUrl` em `src/data/projects.ts` — **opcional**: omitido (não `undefined` explícito, `exactOptionalPropertyTypes` não deixa) para trabalho de cliente com código privado, e o botão "Ver repositório" do modal some sozinho (`<sc-if value="{{ activeProject.repoUrl }}">`, mesmo padrão do `liveUrl`) |
 | Capa de um projeto — logo oficial, screenshot real, ou ilustração | `src/data/projects.ts`: `logo` (path) para uma logo transparente ou `logo` + `logoIsScreenshot: true` para uma captura de tela real; `illustration` (uma `IllustrationKey`) só quando não há nenhuma das duas ainda. Ver `coverKind` em `component.ts` e "Componentes" abaixo |
 | Ilustrações SVG usadas como capa provisória (nenhum logo/screenshot ainda) | `src/logic/illustrations.ts` |
 | A logo "AR" do site (header, rodapé, selo, modal) | `src/logic/logo-mark.ts` |

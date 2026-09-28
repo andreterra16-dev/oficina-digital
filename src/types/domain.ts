@@ -158,6 +158,8 @@ export interface ProductTypeView {
 
 /** The currently-selected skill, flattened for the detail panel. */
 export interface SelectionView {
+  /** `Skill.id` — shown as the terminal's command echo (`$ skill <id>`). */
+  id: string;
   label: string;
   branchLabel: string;
   desc: string;
@@ -199,7 +201,10 @@ interface ProjectBase {
   evolution: I18nString;
   /** How the project's requirements/features were mapped/planned before building. */
   mapping: I18nString;
-  repoUrl: string;
+  /** Omitted for client work whose code is private — the modal's "Ver
+   *  repositório" CTA is guarded on this being present, same pattern as
+   *  `liveUrl` below. */
+  repoUrl?: string;
   liveUrl?: string;
 }
 
@@ -268,6 +273,11 @@ export type EnrichedProject = Localized<Project> & {
 export interface ComponentState {
   /** Selected skill node id in the "Bancada de IA" tree. */
   skill: string;
+  /** Live text typed into the Bancada de IA terminal input — takes priority
+   *  over `skill` for the detail panel while it matches a skill (see
+   *  `matchSkill` in component.ts), so a visitor can either click a node or
+   *  type its name/id. */
+  terminalQuery: string;
   /** Selected product type index in the "jogo do seu projeto" esteira. */
   productIndex: number;
   /** Currently open project modal, or `null` when closed. */
