@@ -2,6 +2,14 @@ node_modules/
 *.tmp.js
 *.tmp.cjs
 
+# Claude Code skill packs installed locally via `npx skills add` — agent
+# tooling used to build this site, not site content or source; analogous to
+# node_modules above. Re-install with the same `npx skills add <source>`
+# commands if this clone needs them again.
+.agents/
+.claude/
+skills-lock.json
+
 # Material de referência baixado de outro site (daviaxs.com.br) — usado como
 # inspiração de design em algum momento, mas não é conteúdo próprio: não deve
 # ir pro repositório público.
