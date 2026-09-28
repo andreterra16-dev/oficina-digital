@@ -31,7 +31,7 @@ import { projectHasIllustration } from '../types/domain';
 // needed for *type* positions like `RefObject<...>` and `MouseEvent`,
 // which a bare `declare const React: typeof import('react')` value
 // doesn't expose as a namespace.
-import type { ChangeEvent, MouseEvent as ReactMouseEvent, ReactElement, RefObject, SyntheticEvent } from 'react';
+import type { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactElement, RefObject, SyntheticEvent } from 'react';
 
 /** Finds the nearest ancestor (inclusive) of the click target matching `selector`. */
 function closestFromTarget(ev: SyntheticEvent, selector: string): HTMLElement | null {
@@ -80,6 +80,7 @@ interface RenderVals {
    *  real attempt (≥2 normalized chars) and still matches no skill. */
   terminalNotFound: boolean;
   handleTerminalInput: (ev: ChangeEvent<HTMLInputElement>) => void;
+  handleTerminalKeyDown: (ev: ReactKeyboardEvent<HTMLInputElement>) => void;
   terminalQuery: string;
   logoMarkHeader: ReactElement;
   logoMarkFooter: ReactElement;
@@ -192,6 +193,26 @@ function matchSkill(query: string, lang: 'pt' | 'en'): Skill | undefined {
   const q = normalizeQuery(query);
   if (q.length < 2) return undefined;
   return SKILLS.find((s) => normalizeQuery(s.id).includes(q) || normalizeQuery(s.label[lang]).includes(q));
+}
+
+/** Tab-completion for the terminal input: a stricter, *prefix*-only match
+ *  (unlike `matchSkill`'s "anywhere" substring — the same distinction a real
+ *  shell's Tab-completion makes vs. its history search), so completing
+ *  "reac" always resolves toward "React" and never toward some other skill
+ *  that merely *contains* "reac" somewhere. Prefers the localized label
+ *  (what a visitor is actually typing — words, not internal ids like `pg`
+ *  or `ux`) and falls back to the `id` only when nothing matches by label
+ *  — id-only completion still matters for the handful of skills whose id
+ *  isn't a prefix of its own label (`pg` → "PostgreSQL", `ux` → "UI de
+ *  produto"). Returns the text to complete *to*, or `undefined` once the
+ *  query already spells that out in full (nothing left to complete). */
+function completeSkillQuery(query: string, lang: 'pt' | 'en'): string | undefined {
+  const q = normalizeQuery(query);
+  if (q.length < 1) return undefined;
+  const byLabel = SKILLS.find((s) => normalizeQuery(s.label[lang]).startsWith(q));
+  if (byLabel) return normalizeQuery(byLabel.label[lang]) !== q ? byLabel.label[lang] : undefined;
+  const byId = SKILLS.find((s) => normalizeQuery(s.id).startsWith(q));
+  return byId && byId.id !== q ? byId.id : undefined;
 }
 
 function computeLinkCoords(): Array<{ x1: number; y1: number; x2: number; y2: number }> {
@@ -461,6 +482,21 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     this.setState({ terminalQuery: ev.target.value });
   };
 
+  /** `Tab` inside the terminal input completes the typed text toward a
+   *  matching skill (see `completeSkillQuery`) instead of doing its native
+   *  job of moving focus to the next element — the same override every
+   *  real shell/IDE makes for the same reason: completion is *the* point
+   *  of pressing Tab here, not a form field a visitor is trying to escape.
+   *  No other key is special-cased; a plain `Enter` just stays a no-op
+   *  (there's no `<form>` around this input to submit). */
+  handleTerminalKeyDown = (ev: ReactKeyboardEvent<HTMLInputElement>): void => {
+    if (ev.key !== 'Tab') return;
+    const completion = completeSkillQuery(this.state.terminalQuery, this.state.lang);
+    if (!completion) return;
+    ev.preventDefault();
+    this.setState({ terminalQuery: completion });
+  };
+
   openProject = (ev: ReactMouseEvent): void => {
     const card = closestFromTarget(ev, '[data-project]');
     if (!card) return;
@@ -694,6 +730,7 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       },
       terminalNotFound,
       handleTerminalInput: this.handleTerminalInput,
+      handleTerminalKeyDown: this.handleTerminalKeyDown,
       terminalQuery: this.state.terminalQuery,
       logoMarkHeader: logoMark(36, true, this.state.theme),
       logoMarkFooter: logoMark(26, false, this.state.theme),

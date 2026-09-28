@@ -60,7 +60,8 @@ export const TRANSLATIONS: Record<string, I18nString> = {
   workbenchCard2Desc: { pt: 'Base de engenharia: modelo o problema antes de escrever o prompt. Laudo técnico e pipeline de dados exigem o mesmo rigor.', en: 'Engineering background: I model the problem before writing the prompt. Technical reports and data pipelines require the same rigor.' },
   workbenchCard3Title: { pt: 'Entrega', en: 'Delivery' },
   workbenchCard3Desc: { pt: 'Do protótipo ao deploy: interface em Next.js, API em Node, dados em PostgreSQL, tudo containerizado com Docker.', en: 'From prototype to deploy: Next.js frontend, Node API, PostgreSQL data, all containerized with Docker.' },
-  workbenchTerminalPlaceholder: { pt: 'ex.: react, rag, docker…', en: 'e.g.: react, rag, docker…' },
+  workbenchTerminalPlaceholder: { pt: 'ex.: react, docker…', en: 'e.g.: react, docker…' },
+  workbenchTerminalHint: { pt: 'digite o nome de uma peça e pressione Tab pra completar — ou clique num nó', en: "type a piece's name and press Tab to complete it — or click a node" },
   workbenchTerminalNotFound: { pt: 'termo não encontrado — tente outro ou clique num nó', en: 'term not found — try another, or click a node' },
 
   // "jogo do seu projeto" (projects) section

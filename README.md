@@ -243,15 +243,28 @@ bundle específico, não a de identificadores.
 
 ### Terminal da Bancada de IA
 
-O painel de detalhe da Bancada de IA (`<aside>`, o mesmo em desktop e mobile) tem uma linha de
-comando (`$` + `<input>` nativo) acima do conteúdo já existente. Digitar o nome ou id de uma
-peça (por `id` ou pelo `label` localizado, substring, sem diferenciar acento/maiúscula —
-`matchSkill()` em `component.ts`) atualiza o painel ao vivo, com prioridade sobre o último nó
-clicado enquanto o texto casar com alguma peça; um termo sem match mostra um aviso apagado em
-vez de deixar o painel "travado" num estado antigo. Clicar um nó continua funcionando like
-sempre e limpa o campo de busca (para o clique sempre vencer sobre uma busca anterior). Nenhum
-estado novo em `skills.ts` foi necessário — é a mesma fonte (`SKILLS`) e o mesmo fluxo
-(`setState` → `renderVals()`) já usados pelo clique, só com um segundo caminho de entrada.
+O painel de detalhe da Bancada de IA (`<aside>`, o mesmo em desktop e mobile) é uma janela de
+terminal de verdade, não só um input estilizado: barra de título com os 3 pontos + path falso
+(`visitante@oficina:~/bancada-ia`, mesmo vocabulário visual do chrome de terminal dos cards de
+projeto), um prompt `visitante@oficina:~$` com `<input>` nativo, uma dica sempre visível (não só
+um placeholder que some ao focar) convidando a digitar e a usar Tab, e o conteúdo abaixo
+reenquadrado como a "saída impressa" do comando (borda esquerda, eco `$ skill <id>`).
+
+- **Digitar** (`handleTerminalInput`, `onChange`) casa por `id` ou pelo `label` localizado,
+  substring, sem diferenciar acento/maiúscula (`matchSkill()`), e atualiza o painel ao vivo —
+  com prioridade sobre o último nó clicado enquanto o texto casar com alguma peça. Sem match, um
+  aviso apagado aparece em vez de deixar o painel "travado" num estado antigo.
+- **Tab** (`handleTerminalKeyDown`, `onKeyDown`) completa o texto digitado — prefixo, não
+  substring, igual a um shell de verdade: `completeSkillQuery()` procura primeiro por `label`
+  (o que a pessoa realmente está digitando: "reac" → "React"), com fallback pro `id` só pros
+  poucos casos em que ele não é um prefixo do próprio label (`pg` → "PostgreSQL", `ux` → "UI de
+  produto"). `preventDefault()` só roda quando há de fato algo pra completar — sem match, o Tab
+  volta a mover o foco normalmente, sem prender o teclado à toa.
+- **Clicar um nó** continua funcionando sempre e limpa o campo de busca (o clique sempre vence
+  sobre uma busca digitada anterior).
+
+Nenhum estado novo em `skills.ts` foi necessário — é a mesma fonte (`SKILLS`) e o mesmo fluxo
+(`setState` → `renderVals()`) já usados pelo clique, só com dois caminhos de entrada a mais.
 
 ### Onde editar o quê
 
