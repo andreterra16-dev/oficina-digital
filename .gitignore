@@ -8,6 +8,7 @@ node_modules/
 # commands if this clone needs them again.
 .agents/
 .claude/
+.codex/
 skills-lock.json
 
 # Material de referência baixado de outro site (daviaxs.com.br) — usado como

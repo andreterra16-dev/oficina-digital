@@ -115,6 +115,23 @@ CMV e preço sugerido para sorveterias e negócios de sobremesa, recalculado ao 
 
 Detalhes de problema, resultado, desafios técnicos e estratégia de cada projeto estão no próprio site, na seção **Peças já entregues**.
 
+## Dentro da página
+
+Duas partes da página são interativas de verdade, e valem o clique:
+
+- **Bancada de IA** · um terminal onde cada peça da minha stack (React, RAG, Docker, SQL…) é um comando. Clicar numa peça, ou só digitar o nome dela, monta no resultado uma ilustração em pixel art, pixel por pixel, ao lado de uma explicação de como uso aquilo na prática. Funciona com toque no celular e com teclado no desktop (`Tab` completa o nome).
+- **GitHub flow** · uma animação que constrói, passo a passo, o caminho de uma mudança até a `main`: branch, commits, pull request, revisão, merge e limpeza. Mostra os comandos reais de cada passo e como as partes se conectam. Há play/pausa, e dá para pular direto para qualquer passo.
+
+### Como eu versiono
+
+É o mesmo fluxo que a animação mostra (o padrão de commits dá para conferir no histórico deste repositório):
+
+- **Uma branch por mudança**, curta e com nome que diz o que ela faz (`feat/…`, `fix/…`).
+- **Commits pequenos, um motivo cada**, no padrão `feat` / `fix` / `docs` / `chore`. O `git log` se lê como diário do projeto.
+- **Pull request antes da `main`**, descrevendo o porquê da mudança, e merge só com `npm run verify` verde (typecheck estrito + build).
+- **`main` sempre publicável**: ela alimenta o deploy no Netlify.
+- **Repositório sem ruído**: `node_modules`, ferramentas de agente de IA e material de terceiros ficam no `.gitignore`; arquivos gerados dizem, no topo, de onde vieram.
+
 ## Contato
 
 - **E-mail:** [andre.terra16@gmail.com](mailto:andre.terra16@gmail.com)
@@ -143,13 +160,34 @@ a página, e lembrados na próxima visita.
 
 ```
 src/
-  data/        conteúdo do site — projetos, habilidades, textos (separado do design)
+  data/        conteúdo do site, separado do design: projetos, habilidades, textos,
+               os passos do GitHub flow, os ícones do GitHub e as ilustrações em pixel
   logic/       estado e comportamento da página (component.ts)
-  components/  pequenos efeitos visuais próprios (revelação de imagem em pixels,
-               cursor com rastro, chuva digital)
+  components/  pequenos elementos visuais próprios (cada um é um custom element):
+               revelação de imagem em pixels, cursor com rastro, chuva digital,
+               ilustração que se monta em pixels (pixel-sprite) e a animação do
+               GitHub flow (git-flow)
 scripts/       compila src/ → arquivos publicados
 assets/        imagens do site
 ```
+
+**Ilustrações em pixel (`pixel-sprite`).** Cada peça da Bancada de IA tem um sprite 24×24
+desenhado em código (`src/data/pixel-sprites.ts`) com uma "caneta" mínima: retângulos, linhas,
+discos, polígonos e uma fonte 3×5. As cores vêm dos mesmos tokens do tema (Warm Forge / Cold
+Steel), então o sprite acompanha a troca de tema. Para ilustrar uma peça nova, basta adicionar
+um `sprite(...)` com o mesmo `id` da habilidade em `src/data/skills.ts`.
+
+**GitHub flow (`git-flow`).** O desenho é um único grafo descrito em dois eixos (tempo e
+"faixa"), e o mesmo desenho vira horizontal em telas largas e uma linha do tempo vertical no
+celular. Tudo no grafo carrega o passo em que aparece (`data-from`), então voltar um passo
+"desdesenha" sozinho. O texto de cada passo, em português e inglês, fica em
+`src/data/github-flow.ts`. A animação só roda enquanto está visível, para de vez quando a pessoa
+assume o controle e é substituída pelo grafo completo para quem prefere menos movimento.
+
+> **Armadilha do runtime.** O `support.js` converte o DOM já renderizado do template em
+> elementos React. Um custom element que escreve filhos no próprio DOM acaba tendo esses filhos
+> "adotados" pelo React e quebra no próximo render (`removeChild`). Por isso `pixel-sprite` e
+> `git-flow` desenham dentro de um *shadow root*.
 
 **Rodando localmente**
 
@@ -159,7 +197,11 @@ Requer Node 18+.
 npm install
 npm run build      # compila src/ para o arquivo publicado
 npm run typecheck  # confere os tipos, sem gerar nada
+npm run verify     # typecheck + build: o que precisa passar antes de qualquer merge
 ```
+
+Depois de `npm run build`, abra `index.html` por um servidor estático local (por exemplo
+`npx serve .`): o site carrega fontes e o React por CDN.
 
 </details>
 
