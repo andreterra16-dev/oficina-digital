@@ -40,7 +40,7 @@ const GENERATED_BANNER =
   '// Edit the .ts source and re-run the build instead; hand edits here will be overwritten.\n';
 
 /** Standalone custom elements: no cross-file imports, bundled as a self-registering IIFE. */
-const COMPONENTS: readonly string[] = ['pixel-reveal', 'ascii-cursor', 'image-slot', 'matrix-rain', 'pixel-sprite', 'git-flow'];
+const COMPONENTS: readonly string[] = ['pixel-reveal', 'ascii-cursor', 'image-slot', 'matrix-rain', 'pixel-sprite', 'git-flow', 'character-3d', 'zdog-orbit'];
 
 async function buildComponents(): Promise<void> {
   for (const name of COMPONENTS) {
@@ -64,6 +64,31 @@ async function buildComponents(): Promise<void> {
     await writeFile(outfile, GENERATED_BANNER + file.text, 'utf8');
     console.log(`  components/${name}.js  (${file.text.length.toLocaleString()} bytes)`);
   }
+}
+
+/** The three.js half of <character-3d>: unlike the IIFEs above it is a real ES
+ *  module, because `character-3d.js` pulls it in on demand with `import()` —
+ *  the ~500 KB renderer is only downloaded by visitors who scroll to a
+ *  character (and don't prefer reduced motion), instead of riding along with
+ *  every page load. Nothing else imports from it, so it's one self-contained
+ *  file with three.js tree-shaken to the handful of classes it uses. */
+async function buildStage(): Promise<void> {
+  const entry = path.join(root, 'src', 'components', 'three-stage.ts');
+  const outfile = path.join(root, 'components', 'three-stage.js');
+  const result = await esbuild.build({
+    entryPoints: [entry],
+    bundle: true,
+    format: 'esm',
+    platform: 'browser',
+    target: 'es2020',
+    write: false,
+    logLevel: 'silent',
+    minify: true,
+  });
+  const [file] = result.outputFiles;
+  if (!file) throw new Error(`esbuild produced no output for ${entry}`);
+  await writeFile(outfile, GENERATED_BANNER + file.text, 'utf8');
+  console.log(`  components/three-stage.js  (${file.text.length.toLocaleString()} bytes, loaded on demand)`);
 }
 
 /** Strips the trailing `export { Component };`-style statement esbuild's ESM
@@ -136,6 +161,7 @@ async function writeIndexHtml(html: string): Promise<void> {
 async function main(): Promise<void> {
   console.log('Bundling components…');
   await buildComponents();
+  await buildStage();
   console.log('Bundling DC logic…');
   const bundledJs = await buildDcLogic();
   console.log('Injecting into Portfolio Andre Ricco.dc.html…');

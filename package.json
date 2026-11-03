@@ -12,11 +12,16 @@
   "devDependencies": {
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.18",
+    "@types/three": "^0.187.0",
     "esbuild": "^0.28.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   },
   "allowScripts": {
     "esbuild@0.28.2": true
+  },
+  "dependencies": {
+    "three": "^0.187.0",
+    "zdog": "^1.1.3"
   }
 }
