@@ -1,6 +1,5 @@
 /// <reference path="../types/dc-runtime.d.ts" />
 import { BRANCH } from '../data/branch';
-import { PRODUCT_TYPES } from '../data/product-types';
 import { PROJECTS } from '../data/projects';
 import { SKILLS } from '../data/skills';
 import { illustration } from './illustrations';
@@ -13,9 +12,6 @@ import type {
   ComponentProps,
   ComponentState,
   EnrichedProject,
-  ProductType,
-  ProductTypeView,
-  ProductTypeWithStyle,
   Project,
   SelectionView,
   Skill,
@@ -68,8 +64,11 @@ interface RenderVals {
   /** The Bancada de IA terminal's `$ help` command list, grouped by branch —
    *  see `terminalCommandGroups()`. */
   terminalCommands: readonly TerminalCommandGroup[];
-  productTypes: readonly ProductTypeWithStyle[];
-  product: ProductTypeView;
+  /** Active language code, handed to `<git-flow lang>` — the element renders
+   *  its own copy from `src/data/github-flow.ts`, so it only needs to know which one. */
+  langCode: 'pt' | 'en';
+  /** Replays `<pixel-sprite>`'s assembly on every skill click — see `ComponentState.skillNonce`. */
+  skillNonce: number;
   sel: SelectionView;
   /** True once the Bancada de IA terminal query is long enough to be a
    *  real attempt (≥2 normalized chars) and still matches no skill. */
@@ -88,7 +87,6 @@ interface RenderVals {
   stopPropagation: (ev: SyntheticEvent) => void;
   toggleLike: (ev: ReactMouseEvent) => void;
   pickSkill: (ev: ReactMouseEvent) => void;
-  pickProduct: (ev: ReactMouseEvent) => void;
   heroChar: RefObject<HTMLDivElement>;
   avatar: RefObject<HTMLDivElement>;
   chip1: RefObject<HTMLDivElement>;
@@ -97,8 +95,6 @@ interface RenderVals {
   railFill: RefObject<HTMLDivElement>;
   railPct: RefObject<HTMLDivElement>;
   headerName: RefObject<HTMLSpanElement>;
-  esteiraFrame: RefObject<HTMLDivElement>;
-  esteiraInner: RefObject<HTMLDivElement>;
   // i18n and theme props
   t: Record<string, string>;
   currentLangLabel: string;
@@ -107,48 +103,9 @@ interface RenderVals {
   toggleTheme: () => void;
   /** wa.me deep links pre-filled with the active language's message —
    *  computed here (not left as static hrefs in the `.dc.html`) so they
-   *  actually change with `lang`, same as `product.waLink` already did. */
+   *  actually change with `lang`. */
   contactWaLink: string;
   slotWaLink: string;
-}
-
-/** The "drawing size" the product esteira is laid out at — every child's
- *  percentage position and every fixed-px button/label inside it was
- *  designed assuming a box this big. Below `MOBILE_BREAKPOINT`, instead of
- *  letting the box shrink and those fixed-px children collide/overlap, the
- *  whole box is rendered at this exact size and then uniformly scaled down
- *  with `transform: scale()` to fit — see `fitToFrame()`. */
-const ESTEIRA_DESIGN = { w: 1100, h: 452 };
-
-/** Scales `inner` (a fixed-size, `designW`×`designH` box) to exactly fill
- *  `frame`'s actual rendered width, and resizes `frame`'s own height to
- *  match — so the frame never has empty space around a mis-scaled inner box,
- *  and never clips it either.
- *
- *  Earlier this capped the scale at `Math.min(1, ...)` — never scale *up*,
- *  only down, on the assumption that `frame` would rarely exceed the design
- *  size on desktop. That assumption was wrong: `#esteira-frame` simply fills
- *  its section with no `max-width` of its own, so on a real, un-zoomed
- *  desktop viewport `frame.clientWidth` is routinely 900–1400px — well past
- *  the 1100 design width. Capped at 1, the box then rendered at its native
- *  design size *inside* that much wider frame, leaving dead space down one
- *  side. Browser zoom changes `clientWidth` in CSS px (zooming in shrinks
- *  it, zooming out grows it), so the one width band where `frame.clientWidth`
- *  happened to land at or below the design size — around 130% zoom on a
- *  typical monitor — was the only band that looked "correct" (scale
- *  actually kicking in, box filling the frame edge to edge); 100% and any
- *  further zoom-out widened the frame past the design size again and
- *  brought the dead space straight back, i.e. the exact "fica bacana em
- *  130%, mas qualquer zoom out desproporciona" bug. Scaling to *exactly*
- *  `clientWidth / designW`, uncapped, makes the box always fill the frame
- *  at any zoom level or viewport width — see the `max-width` on the frame
- *  in the markup, which keeps that uncapped scale from growing unreasonably
- *  large on very wide desktop windows. */
-function fitToFrame(frame: HTMLElement | null, inner: HTMLElement | null, designW: number, designH: number): void {
-  if (!frame || !inner) return;
-  const scale = frame.clientWidth / designW;
-  inner.style.transform = 'scale(' + scale + ')';
-  frame.style.height = Math.round(designH * scale) + 'px';
 }
 
 /** Lowercases and strips diacritics, so "aç" and "rag" both match "RAG &
@@ -201,7 +158,7 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
   override state: ComponentState = {
     skill: 'ia',
     terminalQuery: '',
-    productIndex: 0,
+    skillNonce: 0,
     project: null,
     likes: loadLikes(),
     lang: loadLang(),
@@ -220,19 +177,14 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
    *  so the name isn't shown twice on screen at once; fades in once the
    *  visitor scrolls far enough that the hero's version has scrolled out. */
   readonly headerName: RefObject<HTMLSpanElement>;
-  readonly esteiraFrame: RefObject<HTMLDivElement>;
-  readonly esteiraInner: RefObject<HTMLDivElement>;
 
   /** rAF handle for the throttled scroll handler — 0 when idle. */
   private _raf = 0;
-  /** rAF handle for the throttled resize handler — 0 when idle. */
-  private _resizeRaf = 0;
   // Only handlers `componentWillUnmount` needs to `removeEventListener` are
   // kept as fields; `tick` (rAF-scheduled, never removed directly) stays a
   // local closure inside `componentDidMount`.
   private _move: ((ev: MouseEvent) => void) | null = null;
   private _scroll: (() => void) | null = null;
-  private _resize: (() => void) | null = null;
 
   constructor(props: ComponentProps) {
     super(props);
@@ -244,22 +196,7 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     this.railFill = React.createRef<HTMLDivElement>();
     this.railPct = React.createRef<HTMLDivElement>();
     this.headerName = React.createRef<HTMLSpanElement>();
-    this.esteiraFrame = React.createRef<HTMLDivElement>();
-    this.esteiraInner = React.createRef<HTMLDivElement>();
   }
-
-  /** Re-fits the product esteira to its current frame width — see
-   *  `fitToFrame()`. Called on mount and on every (throttled) resize.
-   *
-   *  Below `MOBILE_BREAKPOINT`, `#esteira-frame` is `display:none` (CSS,
-   *  `@media (max-width:720px)`), replaced by `#esteira-carousel` (a
-   *  swipeable card deck) — not a scale, so it needs no `fitToFrame()` at
-   *  all. Calling it unconditionally here is still safe at that width: a
-   *  `display:none` frame reports `clientWidth === 0`, so the computed
-   *  scale is `0` — inert, since nothing renders it anyway. */
-  private _fitCanvases = (): void => {
-    fitToFrame(this.esteiraFrame.current, this.esteiraInner.current, ESTEIRA_DESIGN.w, ESTEIRA_DESIGN.h);
-  };
 
   override componentDidMount(): void {
     // Apply initial theme to documentElement
@@ -295,12 +232,6 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     };
     window.addEventListener('scroll', this._scroll, { passive: true });
     tick();
-
-    this._fitCanvases();
-    this._resize = (): void => {
-      if (!this._resizeRaf) this._resizeRaf = requestAnimationFrame(() => { this._resizeRaf = 0; this._fitCanvases(); });
-    };
-    window.addEventListener('resize', this._resize, { passive: true });
 
     this._applyCoverSrc();
   }
@@ -341,7 +272,6 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
   override componentWillUnmount(): void {
     if (this._move) window.removeEventListener('mousemove', this._move);
     if (this._scroll) window.removeEventListener('scroll', this._scroll);
-    if (this._resize) window.removeEventListener('resize', this._resize);
   }
 
   toggleLang = (): void => {
@@ -362,37 +292,6 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     updateFavicon(nextTheme);
   };
 
-  /** Handles clicks on the desktop esteira's fixed stops
-   *  (`[data-product-type]`). The mobile carousel (`#esteira-carousel`)
-   *  doesn't go through this at all — its cards are self-contained and
-   *  navigated by swipe/anchor, not by picking a stop that then reveals a
-   *  separate detail panel. */
-  pickProduct = (ev: ReactMouseEvent): void => {
-    const btn = closestFromTarget(ev, '[data-product-type]');
-    if (!btn) return;
-    this._selectProduct(Number(btn.getAttribute('data-product-type')));
-  };
-
-  /** Selects product type `i`: moves the desktop esteira's avatar to its
-   *  track position, updates state, and replays the detail panel's
-   *  reveal animation. Shared by both `pickProduct` branches above. */
-  private _selectProduct(i: number): void {
-    const pt = PRODUCT_TYPES[i];
-    if (!pt) return;
-    if (this.avatar.current) {
-      this.avatar.current.style.left = pt.x + '%';
-      this.avatar.current.style.top = pt.y + '%';
-    }
-    this.setState({ productIndex: i });
-    const panel = document.querySelector('[data-product-panel]');
-    if (panel) {
-      panel.animate(
-        [{ opacity: .3, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }],
-        { duration: 460, easing: 'cubic-bezier(.16,1,.3,1)' }
-      );
-    }
-  }
-
   pickSkill = (ev: ReactMouseEvent): void => {
     const btn = closestFromTarget(ev, '[data-skill]');
     const id = btn?.getAttribute('data-skill');
@@ -401,8 +300,27 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     // was previously typed — otherwise a stale typed query still matching
     // some *other* skill would keep overriding the just-clicked node in
     // `renderVals()`'s `sel` (typed match takes priority — see there).
-    this.setState({ skill: id, terminalQuery: '' });
+    this.setState({ skill: id, terminalQuery: '', skillNonce: this.state.skillNonce + 1 });
+    this._keepSpriteInView();
   };
+
+  /** On a phone the command chips can sit a screen away from the readout
+   *  they drive, so a tap would animate the pixel illustration somewhere the
+   *  visitor can't see. After the click's render lands, bring it into view —
+   *  centered, so the chips stay visible above it and the start of the
+   *  description below — but only when it isn't already comfortably on screen
+   *  (24px clear of the viewport's bottom edge, and below the fixed header). */
+  private _keepSpriteInView(): void {
+    if (!window.matchMedia?.('(max-width: 720px)').matches) return;
+    setTimeout(() => {
+      const fig = document.getElementById('ia-sprite-fig');
+      if (!fig) return;
+      const r = fig.getBoundingClientRect();
+      if (r.top >= 84 && r.bottom <= window.innerHeight - 24) return;
+      const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      fig.scrollIntoView({ block: 'center', behavior: calm ? 'auto' : 'smooth' });
+    }, 0);
+  }
 
   /** Bancada de IA terminal input — live, on every keystroke (`onChange`
    *  fires per-input on a controlled `<input>`, same as native `input`).
@@ -516,25 +434,6 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     });
   }
 
-  /** Positions one esteira stop — same `translate`/`scale` split as
-   *  `nodeStyle` above, and for the same reason: this also carries a
-   *  `popIn` entrance animation, whose final keyframe (`transform:scale(1)`)
-   *  would otherwise permanently clobber both the centering *and* the
-   *  active stop's 1.16× highlight once the animation's `both` fill-mode
-   *  locks it in — the standalone `translate`/`scale` properties are never
-   *  touched by `popIn` (which only animates `transform`), so they survive
-   *  it and the active stop's scale-up is fully in effect after mount. */
-  private productStyle(pt: ProductType, i: number, active: boolean): string {
-    return 'position:absolute;left:' + pt.x + '%;top:' + pt.y + '%;translate:-50% -50%;scale:' + (active ? '1.16' : '1') + ';'
-      + 'width:56px;height:56px;border-radius:4px;display:grid;place-items:center;cursor:pointer;font-family:inherit;'
-      + 'color:' + (active ? 'var(--color-bg-base)' : 'var(--color-accent)') + ';'
-      + 'background:' + (active ? 'linear-gradient(150deg,var(--color-support-amber),var(--color-accent))' : 'rgba(var(--rgb-accent),.10)') + ';'
-      + 'border:1px ' + (active ? 'solid rgba(var(--rgb-accent),.9)' : 'dashed rgba(var(--rgb-accent),.5)') + ';'
-      + 'box-shadow:' + (active ? '0 10px 26px -14px rgba(var(--rgb-accent),.9)' : 'none') + ';z-index:5;'
-      + 'transition:transform .45s cubic-bezier(.34,1.28,.4,1),box-shadow .3s;'
-      + 'animation:popIn .55s cubic-bezier(.16,1,.3,1) both ' + (120 + i * 85) + 'ms;';
-  }
-
   override renderVals(): RenderVals {
     const lang = this.state.lang;
     // A typed terminal query that matches a skill wins over the last-clicked
@@ -543,22 +442,6 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     const typedMatch = matchSkill(this.state.terminalQuery, lang);
     const sel = typedMatch ?? SKILLS.find((s) => s.id === this.state.skill) ?? SKILLS[1] ?? SKILLS[0];
     const terminalNotFound = normalizeQuery(this.state.terminalQuery).length >= 2 && !typedMatch;
-
-    const currentProduct = PRODUCT_TYPES[this.state.productIndex] ?? PRODUCT_TYPES[0];
-    const product: ProductTypeView = {
-      tag: currentProduct.tag,
-      title: currentProduct.title[lang],
-      explainer: currentProduct.explainer[lang],
-      examples: currentProduct.examples[lang],
-      idealFor: currentProduct.idealFor[lang],
-      timeframe: currentProduct.timeframe[lang],
-      counter: lang === 'pt'
-        ? 'Tipo ' + currentProduct.tag + ' de ' + String(PRODUCT_TYPES.length).padStart(2, '0')
-        : 'Type ' + currentProduct.tag + ' of ' + String(PRODUCT_TYPES.length).padStart(2, '0'),
-      waLink: whatsAppLink(lang === 'pt'
-        ? 'Olá, André! Vim pela Oficina Digital e quero falar sobre um projeto de ' + currentProduct.title.pt + '.'
-        : 'Hello, André! I came through the Digital Workshop and want to talk about a ' + currentProduct.title.en + ' project.'),
-    };
 
     const activeProjectSource = PROJECTS.find((p) => p.id === this.state.project) ?? null;
 
@@ -573,24 +456,8 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       cursorDensity: this.props.cursorDensity ?? 20,
       heroPixelSize: this.props.revealPixelSize ?? 28,
       terminalCommands: this.terminalCommandGroups(lang, sel.id),
-      productTypes: PRODUCT_TYPES.map((pt, i) => {
-        const active = i === this.state.productIndex;
-        return {
-          ...pt,
-          short: pt.short[lang],
-          title: pt.title[lang],
-          explainer: pt.explainer[lang],
-          examples: pt.examples[lang],
-          idealFor: pt.idealFor[lang],
-          timeframe: pt.timeframe[lang],
-          i,
-          style: this.productStyle(pt, i, active),
-          waLink: whatsAppLink(lang === 'pt'
-            ? 'Olá, André! Vim pela Oficina Digital e quero falar sobre um projeto de ' + pt.title.pt + '.'
-            : 'Hello, André! I came through the Digital Workshop and want to talk about a ' + pt.title.en + ' project.'),
-        };
-      }),
-      product,
+      langCode: lang,
+      skillNonce: this.state.skillNonce,
       sel: {
         id: sel.id,
         label: sel.label[lang],
@@ -621,7 +488,6 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       stopPropagation: this.stopPropagation,
       toggleLike: this.toggleLike,
       pickSkill: this.pickSkill,
-      pickProduct: this.pickProduct,
       heroChar: this.heroChar,
       avatar: this.avatar,
       chip1: this.chip1,
@@ -630,8 +496,6 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       railFill: this.railFill,
       railPct: this.railPct,
       headerName: this.headerName,
-      esteiraFrame: this.esteiraFrame,
-      esteiraInner: this.esteiraInner,
       // i18n and theme variables
       t,
       currentLangLabel: lang === 'pt' ? 'EN' : 'PT',

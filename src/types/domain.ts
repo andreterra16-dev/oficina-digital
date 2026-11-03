@@ -6,8 +6,8 @@
  * An array statically known to have at least one element — lets `arr[0]`
  * resolve to `T` instead of `T | undefined` even under
  * `noUncheckedIndexedAccess`, which arbitrary-index access into a plain
- * `readonly T[]` cannot. Used for `SKILLS`/`PRODUCT_TYPES`: both back a
- * "selected node" fallback chain (`… ?? LIST[0]`) that must always resolve
+ * `readonly T[]` cannot. Used for `SKILLS` and `FLOW_STEPS`: both back a
+ * "selected item" fallback chain (`… ?? LIST[0]`) that must always resolve
  * to a real item — content the site's own home page keeps non-empty by
  * construction, not something a reader-only visitor could ever make empty.
  */
@@ -22,7 +22,7 @@ export interface I18nString {
 /**
  * Resolves every `I18nString`-typed property of `T` to a plain `string` —
  * the shape of a render-time projection once a language has been picked
- * (`Skill`'s `label`/`kind`/`desc`, `ProductType`'s `short`/`title`/…,
+ * (`Skill`'s `label`/`kind`/`desc`, `FlowStep`'s `title`/`text`/…,
  * `ProjectBase`'s `badge`/`subtitle`/…). The distributive form (`T extends
  * unknown ? … : never`, keyed off the naked `T`) matters for `Project`:
  * without it, mapping over the `ProjectWithLogo | ProjectWithIllustration`
@@ -84,55 +84,6 @@ export interface TerminalCommandGroup {
   label: string;
   color: string;
   commands: readonly TerminalCommand[];
-}
-
-/**
- * One kind of product on the "jogo do seu projeto" esteira (etapa 03) — what
- * a visitor can actually hire André to build, not a step of his process.
- * Positions are picked from the same 6 (x,y) coordinates the track's SVG
- * curve was originally authored around (see the track `<path>` in the
- * `.dc.html`), so any subset of them still lands exactly on the curve
- * without redrawing it.
- */
-export interface ProductType {
-  tag: string;
-  short: I18nString;
-  /** Position as a percentage along the esteira path (0–100). */
-  x: number;
-  y: number;
-  title: I18nString;
-  /** What it is, in plain language — no jargon, written for someone who
-   *  isn't technical and is seeing this term for the first time. */
-  explainer: I18nString;
-  /** What it looks like in practice — concrete, recognizable examples. */
-  examples: I18nString;
-  /** Who this is actually for — the situation that makes someone need it. */
-  idealFor: I18nString;
-  /** Rough delivery window, or "sob consulta" for the open-ended catalog-all entry. */
-  timeframe: I18nString;
-}
-
-/** A `ProductType`, localized to the active language, with its computed inline `style` string(s) and esteira index. */
-export interface ProductTypeWithStyle extends Localized<ProductType> {
-  i: number;
-  style: string;
-  /** wa.me deep link pre-filled with a message naming *this* product type —
-   *  unlike `ProductTypeView.waLink` (only the currently-selected one), the
-   *  mobile carousel shows every card at once and each needs its own CTA. */
-  waLink: string;
-}
-
-/** The currently-selected product type, flattened for the detail panel. */
-export interface ProductTypeView {
-  tag: string;
-  title: string;
-  explainer: string;
-  examples: string;
-  idealFor: string;
-  timeframe: string;
-  counter: string;
-  /** WhatsApp deep link pre-filled with a message naming this specific product type. */
-  waLink: string;
 }
 
 /** The currently-selected skill, flattened for the detail panel. */
@@ -267,8 +218,10 @@ export interface ComponentState {
    *  `matchSkill` in component.ts), so a visitor can either click a node or
    *  type its name/id. */
   terminalQuery: string;
-  /** Selected product type index in the "jogo do seu projeto" esteira. */
-  productIndex: number;
+  /** Bumped on every skill click, even a repeat of the current one, so the
+   *  pixel illustration (`<pixel-sprite nonce>`) replays its assembly instead
+   *  of staying put when the same word is clicked twice. */
+  skillNonce: number;
   /** Currently open project modal, or `null` when closed. */
   project: string | null;
   /** Per-project like toggle, keyed by `Project.id`, persisted to `localStorage`. */
