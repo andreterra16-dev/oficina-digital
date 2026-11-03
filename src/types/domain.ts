@@ -209,6 +209,30 @@ export type EnrichedProject = Localized<Project> & {
   likeBtnStyle: string;
 };
 
+/** One engineering figure in a featured panel, localized. */
+export interface FeaturedStatView {
+  value: number;
+  label: string;
+}
+
+/** A flagship project as the feature panel renders it: the enriched project
+ *  plus its `Featured` copy/figures in the active language and the panel's
+ *  computed inline styles (so the template needs no `&&`/ternaries). */
+export type FeaturedView = EnrichedProject & {
+  tagline: string;
+  advantages: string[];
+  stats: FeaturedStatView[];
+  /** Hostname of the live site, shown in the browser-chrome bar. */
+  host: string;
+  panelStyle: string;
+  /** The stats grid's column template: 3 across for six figures, one row for four. */
+  statsStyle: string;
+  /** Flex/grid `order` values: even panels put the media left, odd panels right. */
+  mediaOrder: string;
+  copyOrder: string;
+  mediaStyle: string;
+};
+
 /** `Component`'s local state. */
 export interface ComponentState {
   /** Selected skill node id in the "Bancada de IA" tree. */

@@ -40,7 +40,7 @@ const GENERATED_BANNER =
   '// Edit the .ts source and re-run the build instead; hand edits here will be overwritten.\n';
 
 /** Standalone custom elements: no cross-file imports, bundled as a self-registering IIFE. */
-const COMPONENTS: readonly string[] = ['pixel-reveal', 'ascii-cursor', 'image-slot', 'matrix-rain', 'pixel-sprite', 'git-flow', 'character-3d', 'zdog-orbit'];
+const COMPONENTS: readonly string[] = ['pixel-reveal', 'ascii-cursor', 'image-slot', 'matrix-rain', 'pixel-sprite', 'git-flow', 'character-3d', 'zdog-orbit', 'count-up'];
 
 async function buildComponents(): Promise<void> {
   for (const name of COMPONENTS) {

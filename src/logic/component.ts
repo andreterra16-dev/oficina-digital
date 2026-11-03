@@ -1,5 +1,6 @@
 /// <reference path="../types/dc-runtime.d.ts" />
 import { BRANCH } from '../data/branch';
+import { FEATURED } from '../data/featured';
 import { PROJECTS } from '../data/projects';
 import { SKILLS } from '../data/skills';
 import { illustration } from './illustrations';
@@ -12,6 +13,7 @@ import type {
   ComponentProps,
   ComponentState,
   EnrichedProject,
+  FeaturedView,
   Project,
   SelectionView,
   Skill,
@@ -80,7 +82,10 @@ interface RenderVals {
   logoMarkFooter: ReactElement;
   logoMarkStamp: ReactElement;
   logoMarkModal: ReactElement;
+  /** The non-flagship projects, as cards. */
   projects: readonly EnrichedProject[];
+  /** The flagship projects (see `FEATURED`), as full feature panels. */
+  featuredProjects: readonly FeaturedView[];
   activeProject: EnrichedProject | null;
   openProject: (ev: ReactMouseEvent) => void;
   closeProject: () => void;
@@ -402,6 +407,34 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
     };
   }
 
+  /** The flagship projects as feature panels: each `FEATURED` entry joined to its
+   *  enriched project, localized, with the panel's inline styles computed here
+   *  (alternating the media side so two stacked panels don't mirror each other). */
+  private featuredViews(lang: 'pt' | 'en'): FeaturedView[] {
+    return PROJECTS.flatMap((p) => {
+      const f = FEATURED[p.id];
+      return f ? [{ p, f }] : [];
+    }).map(({ p, f }, i) => {
+      const reversed = i % 2 === 1;
+      let host = '';
+      try { host = p.liveUrl ? new URL(p.liveUrl).host : ''; } catch { /* a malformed URL just hides the address bar text */ }
+      return {
+        ...this.enrichProject(p, lang),
+        tagline: f.tagline[lang],
+        advantages: f.advantages.map((a) => a[lang]),
+        stats: f.stats.map((s) => ({ value: s.value, label: s.label[lang] })),
+        host,
+        statsStyle: 'grid-template-columns:repeat(' + (f.stats.length % 3 === 0 ? 3 : Math.min(4, f.stats.length)) + ',minmax(0,1fr))',
+        mediaOrder: reversed ? '2' : '1',
+        copyOrder: reversed ? '1' : '2',
+        mediaStyle: 'background:url(' + f.screenshot + ') top center / cover no-repeat var(--color-bg-base)',
+        panelStyle: 'position:relative;display:grid;grid-template-columns:minmax(0,1.18fr) minmax(0,1fr);border:1px solid rgba(' + p.colorRgb + ',.42);'
+          + 'background:linear-gradient(150deg,var(--color-bg-elevated-alt),var(--color-bg-panel));--pc:' + p.color + ';--pc-rgb:' + p.colorRgb + ';'
+          + 'animation:rise .9s cubic-bezier(.16,1,.3,1) both;overflow:hidden',
+      };
+    });
+  }
+
   /** Builds the Bancada de IA terminal's `$ help` command list: `SKILLS`
    *  regrouped by branch (dropping the root `core` entry — it isn't a
    *  command a visitor picks, it's the "André" center of the old canvas),
@@ -481,7 +514,8 @@ class Component extends DCLogic<ComponentProps, ComponentState> {
       logoMarkFooter: logoMark(26, false, this.state.theme),
       logoMarkStamp: logoMark(30, false, this.state.theme),
       logoMarkModal: logoMark(22, false, this.state.theme),
-      projects: PROJECTS.map((p) => this.enrichProject(p, lang)),
+      projects: PROJECTS.filter((p) => !FEATURED[p.id]).map((p) => this.enrichProject(p, lang)),
+      featuredProjects: this.featuredViews(lang),
       activeProject: activeProjectSource ? this.enrichProject(activeProjectSource, lang) : null,
       openProject: this.openProject,
       closeProject: this.closeProject,
