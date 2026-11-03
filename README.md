@@ -133,19 +133,23 @@ Detalhes de problema, resultado, desafios técnicos e estratégia de cada projet
 Duas partes da página são interativas de verdade, e valem o clique:
 
 - **Bancada de IA** · um terminal onde cada peça da minha stack (React, RAG, Docker, SQL…) é um comando. Clicar numa peça, ou só digitar o nome dela, monta no centro do terminal uma ilustração em pixel art, pixel por pixel, com a explicação de como uso aquilo na prática logo abaixo. Funciona com toque no celular e com teclado no desktop (`Tab` completa o nome).
-- **GitHub flow** · uma animação que constrói, passo a passo, o caminho de uma mudança até a `main`: branch, commits, pull request, revisão, merge e limpeza. Mostra os comandos reais de cada passo e como as partes se conectam. Há play/pausa, e dá para pular direto para qualquer passo.
+- **GitHub flow para a era dos agentes** · uma animação que constrói, passo a passo, o caminho de uma mudança até a `main`, com os comandos reais de cada etapa: worktree isolado por tarefa, checkpoints reescritos em commits, revisão por risco, verificação antes do olho humano, squash e uma rede de segurança (`bisect`, `revert`, `reflog`). Tem play/pausa e dá para pular para qualquer passo.
 - **Projetos em destaque** · Salomão Select e o portal da Salomão Santos têm painéis próprios, com captura real do site no ar, o que cada um entrega e os números de engenharia (modelos de dados, migrações, rotas, ADRs, testes, releases) subindo quando entram na tela. Todos os números foram contados nos repositórios, e a página informa a data da contagem.
 - **Personagem em 3D** · o meu boneco (na abertura, no "Acabamento" e no contato) ganha profundidade de verdade: o corpo se destaca do fundo e acompanha o mouse, "respira" e recebe uma luz que se move. No contato ele também acena se despedindo. Em volta dele flutuam objetos em pseudo-3D (cubo, anel, hexágono, `</>` e pixels em voxel). Em quem prefere menos movimento, ou sem WebGL, fica a imagem estática de sempre.
 
-### Como eu versiono
+### Como eu versiono (e reviso o que a IA escreve)
 
-É o mesmo fluxo que a animação mostra (o padrão de commits dá para conferir no histórico deste repositório):
+É o fluxo que a animação mostra. Quando agentes geram diffs enormes, o gargalo deixa de ser escrever e passa a ser revisar com segurança, então o fluxo troca volume por risco:
 
-- **Uma branch por mudança**, curta e com nome que diz o que ela faz (`feat/…`, `fix/…`).
-- **Commits pequenos, um motivo cada**, no padrão `feat` / `fix` / `docs` / `chore`. O `git log` se lê como diário do projeto.
-- **Pull request antes da `main`**, descrevendo o porquê da mudança, e merge só com `npm run verify` verde (typecheck estrito + build).
-- **`main` sempre publicável**: ela alimenta o deploy no Netlify.
+- **Uma tarefa, um worktree.** Cada tarefa, minha ou de um agente, tem branch e `git worktree` próprios, o que permite vários agentes em paralelo sem colisão. Nenhum deles chega à `main`.
+- **Checkpoints viram história.** O agente comita à vontade; antes do PR eu leio cada hunk (`git add -p`) e reescrevo em commits de uma ideia só (`feat` / `fix` / `docs` / `chore`), com o trailer `Co-Authored-By` marcando o que foi IA.
+- **Revisão por risco, não por tamanho.** Primeiro o formato do diff (`--stat`, arquivos tocados, lockfile). Auth, migração, config e dependência nova levam leitura completa; o resto, testes e uma passada de olho.
+- **Máquina primeiro, olho depois.** `npm run verify` (typecheck estrito + build) e testes no hook e no CI, mais varredura de segredos. Se falha, o erro volta para o agente. Pacote novo só entra com o diff do lockfile revisado.
+- **Squash na `main`**: um commit por ideia, `main` linear e sempre publicável (ela alimenta o deploy no Netlify).
+- **Rede de segurança.** `git bisect run` acha o commit culpado, `git revert` desfaz sem reescrever história, o `reflog` recupera o que um agente apagou. Force push só como `--force-with-lease`, em branch própria.
 - **Repositório sem ruído**: `node_modules`, ferramentas de agente de IA e material de terceiros ficam no `.gitignore`; arquivos gerados dizem, no topo, de onde vieram.
+
+O padrão de commits dá para conferir no histórico deste repositório.
 
 ## Contato
 
@@ -208,9 +212,23 @@ uma respiração lenta e o fragment shader deriva uma normal do próprio mapa pa
 relevo com uma luz móvel. O `<pixel-reveal>` continua sendo a abertura (e o fallback): o
 componente só faz o *crossfade* para a cena viva depois que a abertura termina.
 
+- **Entra logo no começo.** A cena viva é o que o visitante deve ver se mexendo desde o início,
+  então ela carrega cedo: o módulo, a textura e o mapa de profundidade do herói são pré-carregados
+  no `<head>` (`modulepreload` + `preload`), a cena começa a subir antes do React montar a página,
+  e quando o runtime troca os elementos pelos finais, a cena já criada é *entregue* ao novo
+  elemento em vez de refeita. Ela só espera a sequência de boot terminar (`#boot-overlay`, ~1,6 s)
+  e então toca a própria entrada: a imagem se monta em blocos, já viva. O `<pixel-reveal>` slotado
+  é só o fallback: aparece se a cena demorar mais de 2,5 s depois do boot, e é tudo que vê quem tem
+  "reduzir movimento" ou não tem WebGL.
+- **Texturas leves.** A cena usa versões WebP de `assets/3d/` (a do herói tem ~75 KB, contra
+  2,6 MB do PNG original, que continua sendo o fallback). Se uma imagem de personagem mudar,
+  gere de novo o WebP e o mapa de profundidade.
+- **Responsivo.** O canvas acompanha o tamanho do elemento (ResizeObserver). Nos retratos
+  redondos a imagem *cobre* o círculo (`fit="cover"`) e a câmera avança alguns por cento
+  (`zoom`), para a malha inclinada nunca expor a borda como um corte reto.
 - **Carregamento sob demanda.** O Three.js (~540 KB, já com tree-shaking) vive em um módulo
-  próprio, `components/three-stage.js`, importado com `import()` quando o personagem entra na
-  tela. Quem tem "reduzir movimento" ligado nunca baixa nada disso.
+  próprio, `components/three-stage.js`, importado com `import()`. Quem tem "reduzir movimento"
+  ligado nunca baixa nada disso.
 - **Só renderiza visível.** O loop de render para fora da tela e com a aba em segundo plano.
 - **Mapas de profundidade.** Ficam em `assets/depth/` e saem de `scripts/depth/make-depth.py`
   (segmentação clássica, sem modelo de IA: o corpo vira um "travesseiro" suavizado).

@@ -162,6 +162,7 @@ ${Array.from({ length: N }, (_, k) => `.gf[data-step="${k}"] .gf-ping[data-ping=
 .gf-btn svg{pointer-events:none}
 .gf-title{margin:0;font-family:'Archivo',system-ui,sans-serif;font-size:clamp(22px,2.4vw,30px);font-weight:600;letter-spacing:-.03em;line-height:1.08;font-stretch:108%;text-wrap:balance}
 .gf-text{margin:0;font-family:'Archivo',system-ui,sans-serif;font-size:15.5px;line-height:1.7;color:var(--color-text-soft);max-width:52ch;text-wrap:pretty}
+.gf-text code{font-family:'JetBrains Mono',monospace;font-size:.86em;color:var(--color-text-main);background:rgba(var(--rgb-text-main),.08);padding:1px 5px;border-radius:3px;white-space:nowrap}
 .gf-why{display:flex;flex-wrap:wrap;align-items:center;gap:6px 9px;font-size:11.5px;color:var(--color-accent);margin-top:auto}
 .gf-why i{white-space:nowrap;font-style:normal;color:var(--color-text-sec);letter-spacing:.16em;text-transform:uppercase;font-size:9.5px}
 .gf-term{padding:26px 28px;background:var(--color-bg-base);border-left:1px dashed rgba(var(--rgb-text-main),.2);display:flex;flex-direction:column;gap:10px;font-size:12.5px;min-width:0;justify-content:center}

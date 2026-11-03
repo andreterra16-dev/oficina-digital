@@ -14,6 +14,7 @@
 // loads on demand with `import()` — visitors who never scroll to a character
 // (or who prefer reduced motion) never download the ~500 KB renderer.
 import {
+  Cache,
   Mesh,
   PerspectiveCamera,
   PlaneGeometry,
@@ -36,6 +37,13 @@ export interface StageOptions {
   amp: number;
   /** Idle sway strength; 1 = the default gentle motion. */
   sway: number;
+  /** `contain` keeps the whole image in frame (rectangular cards); `cover`
+   *  fills the frame and crops the overflow (round portraits, where a
+   *  letterboxed edge would show as a flat cut inside the circle). */
+  fit: 'contain' | 'cover';
+  /** Final push-in once live, as a multiple of the fitted size — enough that
+   *  the tilted plane's edges never come into frame. */
+  zoom: number;
   /** Optional waving limb: the part of the image above `y0..y1` and left of
    *  `xFull..xFade` (all in image UV, y up) swings about the pivot (the
    *  elbow) — used for the contact portrait's goodbye wave. */
@@ -45,6 +53,9 @@ export interface StageOptions {
 export interface Stage {
   start(): void;
   stop(): void;
+  /** Plays the entrance: the picture assembles from square tiles, in random
+   *  order, in about a second. Call once, when the canvas becomes visible. */
+  reveal(): void;
   /** Normalised pointer in [-1, 1] on both axes. */
   setPointer(x: number, y: number): void;
   resize(): void;
@@ -89,10 +100,19 @@ const FRAG = /* glsl */ `
 uniform sampler2D uMap;
 uniform float uTime;
 uniform vec2 uLight;
+uniform float uReveal;
+uniform float uAspect;
 varying vec2 vUv;
 varying float vDepth;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 void main() {
   vec4 c = texture2D(uMap, vUv);
+  // Entrance: square tiles pop in at random, each flashing bright as it lands
+  // (the same pixel-tile idea as <pixel-reveal>, but on the live scene).
+  float h = hash(floor(vUv * vec2(26.0 * uAspect, 26.0)));
+  float k = uReveal * 1.2 - h;
+  if (k <= 0.0) discard;
+  float fresh = 1.0 - smoothstep(0.0, 0.2, k);
   // A normal from the depth map's own slope: where the surface turns toward
   // the light it brightens, where it turns away it dims — a soft relief
   // shading that only exists on the figure (the backdrop is depth 0).
@@ -105,8 +125,15 @@ void main() {
   float sweep = fract(uTime * 0.13);
   float band = smoothstep(0.07, 0.0, abs((vUv.x + (1.0 - vUv.y)) * 0.5 - (sweep * 1.5 - 0.25)));
   rgb += band * body * 0.09;
+  rgb += fresh * 0.4;
   gl_FragColor = vec4(rgb * c.a, c.a);
 }`;
+
+// The DC runtime mounts the page's React tree *after* the template was already
+// parsed, replacing the parse-time <character-3d> elements with fresh ones; with
+// the cache on, the second stage reuses the already-decoded images instead of
+// fetching and decoding a 2048×3072 PNG again.
+Cache.enabled = true;
 
 function loadTexture(url: string, mips: boolean): Promise<Texture> {
   return new Promise((resolve, reject) => {
@@ -146,6 +173,7 @@ export async function createStage(opts: StageOptions): Promise<Stage> {
         uTime: { value: 0 },
         uLight: { value: [0.3, 0.4] },
         uAspect: { value: aspect },
+        uReveal: { value: 0 },
         uWaveA: { value: opts.wave ? [...opts.wave.pivot, opts.wave.y0, opts.wave.y1] : [0, 0, 0, 0] },
         uWaveB: { value: opts.wave ? [opts.wave.xFull, opts.wave.xFade, opts.wave.amp, opts.wave.speed] : [0, 0, 0, 0] },
       },
@@ -168,6 +196,8 @@ export async function createStage(opts: StageOptions): Promise<Stage> {
   let tx = 0, ty = 0; // target pointer
   let px = 0, py = 0; // smoothed pointer
   let baseZ = 3;
+  let revealAt = -1;
+  let zoomT = -1;
 
   const fit = (): void => {
     const w = Math.max(1, canvas.clientWidth), h = Math.max(1, canvas.clientHeight);
@@ -175,7 +205,8 @@ export async function createStage(opts: StageOptions): Promise<Stage> {
     camera.aspect = w / h;
     // Distance at which the whole plane just fits (contain), at this FOV.
     const t = Math.tan((camera.fov * Math.PI) / 360);
-    const z = Math.max(1 / (2 * t), aspect / (2 * t * camera.aspect)) * 1.02;
+    const byHeight = 1 / (2 * t), byWidth = aspect / (2 * t * camera.aspect);
+    const z = (opts.fit === 'cover' ? Math.min(byHeight, byWidth) : Math.max(byHeight, byWidth)) * 1.02;
     baseZ = z + opts.amp * 0.5;
     camera.position.set(0, 0, baseZ);
     camera.updateProjectionMatrix();
@@ -188,10 +219,12 @@ export async function createStage(opts: StageOptions): Promise<Stage> {
     last = now;
     time += dt;
     const k = 1 - Math.exp(-dt * 5);
-    // A slow push-in once live: it starts exactly where the flat image sits (so
-    // the crossfade from it is invisible) and settles 5% closer, which keeps the
+    // A slow push-in once live: it eases the camera `zoom`× closer, which keeps the
     // tilted plane's edges outside the frame.
-    camera.position.z = baseZ / (1 + 0.05 * (1 - Math.pow(1 - Math.min(1, time / 1.8), 3)));
+    const zp = zoomT < 0 ? 0 : Math.min(1, (now - zoomT) / 1800);
+    camera.position.z = baseZ / (1 + (opts.zoom - 1) * (1 - Math.pow(1 - zp, 3)));
+    const rp = revealAt < 0 ? 0 : Math.min(1, (now - revealAt) / 1100);
+    uniforms['uReveal']!.value = 1 - Math.pow(1 - rp, 2);
     px += (tx - px) * k;
     py += (ty - py) * k;
     const s = opts.sway;
@@ -215,6 +248,10 @@ export async function createStage(opts: StageOptions): Promise<Stage> {
     stop(): void {
       running = false;
       cancelAnimationFrame(raf);
+    },
+    reveal(): void {
+      if (revealAt >= 0) return; // the entrance plays once per scene
+      revealAt = zoomT = performance.now();
     },
     setPointer(x, y): void { tx = x; ty = y; },
     resize: fit,

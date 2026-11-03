@@ -3,11 +3,14 @@ import type { OcticonName } from './github-icons';
 
 /**
  * The six steps of GitHub flow as this portfolio's `<git-flow>` animation
- * walks through them — the same six GitHub's own docs name (branch, commit,
- * pull request, review, merge, delete the branch). `cmds` are real commands
- * (git / gh CLI / this repo's own `npm run verify`), not pseudo-code; `why`
- * is the one-line reason the step exists, which is the part that shows how
- * the pieces connect rather than just listing them.
+ * walks through them — still GitHub flow's own skeleton (branch, commits, pull
+ * request, checks, merge, cleanup), but written for readers who already know
+ * it: each step carries the practice that matters when agents write much of
+ * the code — worktrees for parallel agents, checkpoint commits rewritten into
+ * history, review by risk, machine-first gates, squash, and a recovery path.
+ * `cmds` are real commands (git / gh CLI / this repo's `npm run verify`), kept
+ * under ~38 characters so they fit a phone's terminal line; `why` is the
+ * one-line reason the step exists.
  */
 export interface FlowStep {
   id: 'branch' | 'commit' | 'pr' | 'review' | 'merge' | 'clean';
@@ -27,79 +30,79 @@ export const FLOW_STEPS: NonEmptyArray<FlowStep> = [
   {
     id: 'branch',
     icon: 'gitBranch',
-    short: { pt: 'Branch', en: 'Branch' },
-    title: { pt: 'Abro uma branch', en: 'Branch off' },
+    short: { pt: 'Isolar', en: 'Isolate' },
+    title: { pt: 'Uma tarefa, um worktree', en: 'One task, one worktree' },
     text: {
-      pt: 'Toda mudança nasce numa branch curta, com um nome que diz o que ela faz. A main fica intocada enquanto eu trabalho.',
-      en: 'Every change starts on a short branch named for what it does. main stays untouched while I work.',
+      pt: 'Cada tarefa, minha ou de um agente, ganha branch e worktree próprios. Vários agentes rodam em paralelo sem sobrescrever um ao outro, e nenhum tem caminho até a main.',
+      en: 'Every task, mine or an agent’s, gets its own branch and worktree. Several agents run in parallel without overwriting each other, and none of them has a path to main.',
     },
-    why: { pt: 'A main nunca fica quebrada.', en: 'main never breaks.' },
-    cmds: ['git switch main && git pull', 'git switch -c feat/github-flow'],
+    why: { pt: 'Paralelismo sem colisão.', en: 'Parallelism without collisions.' },
+    cmds: ['git worktree add ../flow -b feat/flow', 'cd ../flow'],
     pr: { pt: 'ainda sem pull request', en: 'no pull request yet' },
   },
   {
     id: 'commit',
     icon: 'gitCommit',
     short: { pt: 'Commits', en: 'Commits' },
-    title: { pt: 'Commito em passos pequenos', en: 'Commit in small steps' },
+    title: { pt: 'Checkpoints viram história', en: 'Checkpoints become history' },
     text: {
-      pt: 'Um motivo por commit, no padrão feat / fix / docs / chore. Lido em sequência, o histórico explica o porquê de cada decisão.',
-      en: 'One reason per commit, in the feat / fix / docs / chore convention. Read in order, the history explains every decision.',
+      pt: 'O agente comita à vontade, em checkpoints. Antes do PR eu leio cada hunk com <code>git add -p</code> e reescrevo em commits de uma ideia só, com o trailer <code>Co-Authored-By</code> marcando o que foi IA.',
+      en: 'The agent commits freely, as checkpoints. Before the PR I read every hunk with <code>git add -p</code> and rewrite them into one-idea commits, with a <code>Co-Authored-By</code> trailer marking what was AI.',
     },
-    why: { pt: 'O histórico vira documentação.', en: 'The history becomes documentation.' },
-    cmds: ['git add -p', 'git commit -m "feat: github flow"', 'git commit -m "fix: mobile layout"'],
+    why: { pt: 'Auditável: IA e humano continuam distinguíveis.', en: 'Auditable: AI and human changes stay distinguishable.' },
+    cmds: ['git add -p', 'git commit -m "feat: flow"', 'git rebase -i origin/main'],
     pr: { pt: 'ainda sem pull request', en: 'no pull request yet' },
   },
   {
     id: 'pr',
     icon: 'gitPullRequest',
     short: { pt: 'Pull request', en: 'Pull request' },
-    title: { pt: 'Abro o pull request', en: 'Open the pull request' },
+    title: { pt: 'Reviso por risco, não por tamanho', en: 'Review by risk, not by size' },
     text: {
-      pt: 'O PR é onde a mudança vira conversa: explica o porquê, mostra o diff e dispara a verificação antes de qualquer um tocar na main.',
-      en: 'The PR is where a change becomes a conversation: it explains why, shows the diff and triggers the checks before anyone touches main.',
+      pt: 'Diff de IA é grande, e o risco costuma morar em poucas linhas. Olho primeiro o formato (<code>--stat</code>, arquivos tocados, lockfile). Auth, migração, config e pacote novo levam leitura completa; o resto, testes e uma passada de olho.',
+      en: 'AI diffs are big and the risk usually sits in a few lines. I look at the shape first (<code>--stat</code>, files touched, lockfile). Auth, migrations, config and new packages get a full read; the rest gets tests and a skim.',
     },
-    why: { pt: 'Decisão registrada, não só código.', en: 'The decision is recorded, not just the code.' },
-    cmds: ['git push -u origin feat/github-flow', 'gh pr create --fill'],
+    why: { pt: 'Atenção humana gasta onde dói.', en: 'Human attention spent where it hurts.' },
+    cmds: ['git diff origin/main... --stat', 'gh pr create --fill'],
     pr: { pt: 'aberto · aguardando revisão', en: 'open · awaiting review' },
   },
   {
     id: 'review',
     icon: 'comment',
-    short: { pt: 'Revisão', en: 'Review' },
-    title: { pt: 'Reviso e ajusto', en: 'Review and adjust' },
+    short: { pt: 'Verificar', en: 'Verify' },
+    title: { pt: 'Máquina primeiro, olho depois', en: 'Machine first, eyes second' },
     text: {
-      pt: 'Typecheck estrito e build precisam passar. Cada comentário de revisão vira um commit novo na mesma branch — nada é reescrito às escondidas.',
-      en: 'Strict typecheck and build have to pass. Every review comment becomes a new commit on the same branch — nothing is rewritten behind anyone’s back.',
+      pt: 'Typecheck estrito, testes e build rodam no hook de pre-push e no CI, com varredura de segredos. Se falha, o erro volta para o agente e eu só discuto código que passa. Cada ajuste é commit novo, sem force push.',
+      en: 'Strict typecheck, tests and build run in the pre-push hook and in CI, with secret scanning. If it fails, the error goes back to the agent and I only discuss code that passes. Every fix is a new commit, no force push.',
     },
-    why: { pt: 'Só entra o que foi verificado.', en: 'Only verified work gets in.' },
-    cmds: ['npm run verify', 'git commit -m "fix: review feedback"'],
+    why: { pt: 'Código de IA e o meu passam pelo mesmo portão.', en: 'AI code and mine go through the same gate.' },
+    cmds: ['npm run verify', 'gh pr checks --watch'],
     pr: { pt: 'aberto · verificação ok', en: 'open · checks passing' },
   },
   {
     id: 'merge',
     icon: 'gitMerge',
     short: { pt: 'Merge', en: 'Merge' },
-    title: { pt: 'Faço o merge na main', en: 'Merge into main' },
+    title: { pt: 'Squash na main', en: 'Squash into main' },
     text: {
-      pt: 'Com revisão feita e verificação verde, o PR entra na main. É o único caminho para ela — por isso a main segue sempre publicável.',
-      en: 'With review done and checks green, the PR lands on main. It is the only way in — which is why main stays publishable at all times.',
+      pt: 'Squash merge: a main ganha um commit por ideia, com o título do PR, e fica linear. Branch e worktree somem junto, e o histórico continua fácil de bisseccionar.',
+      en: 'Squash merge: main gains one commit per idea, titled like the PR, and stays linear. The branch and worktree go away with it, and the history stays easy to bisect.',
     },
-    why: { pt: 'Um único caminho até a main.', en: 'One single path into main.' },
-    cmds: ['gh pr merge --merge'],
+    why: { pt: 'Main linear, uma ideia por commit.', en: 'A linear main, one idea per commit.' },
+    cmds: ['gh pr merge --squash --delete-branch', 'git worktree remove ../flow'],
     pr: { pt: 'merged na main', en: 'merged into main' },
   },
   {
     id: 'clean',
     icon: 'tag',
-    short: { pt: 'Limpeza', en: 'Cleanup' },
-    title: { pt: 'Apago a branch e publico', en: 'Delete the branch, ship it' },
+    short: { pt: 'Rede', en: 'Safety net' },
+    title: { pt: 'Rede de segurança', en: 'Safety net' },
     text: {
-      pt: 'A branch cumpriu o papel e sai de cena; o repositório não acumula lixo. A main alimenta o deploy no Netlify, e o commit que publicou continua rastreável.',
-      en: 'The branch has done its job and goes away; the repo doesn’t pile up leftovers. main feeds the Netlify deploy, and the commit that shipped stays traceable.',
+      pt: 'Se algo escapar: <code>bisect run</code> acha o commit culpado em minutos, <code>revert</code> desfaz sem reescrever história e o <code>reflog</code> recupera o que um agente apagou. Force push só com <code>--force-with-lease</code>, em branch própria.',
+      en: 'If something slips through: <code>bisect run</code> finds the guilty commit in minutes, <code>revert</code> undoes it without rewriting history, and the <code>reflog</code> recovers whatever an agent deleted. Force push only with <code>--force-with-lease</code>, on a branch of its own.',
     },
-    why: { pt: 'Repositório limpo, entrega rastreável.', en: 'A clean repo, a traceable release.' },
-    cmds: ['git switch main && git pull', 'git branch -d feat/github-flow'],
+    why: { pt: 'Erro de agente é recuperável.', en: 'An agent’s mistake is recoverable.' },
+    cmds: ['git bisect run npm test', 'git revert <sha>', 'git reflog -5'],
     pr: { pt: 'merged · branch apagada', en: 'merged · branch deleted' },
   },
 ];
