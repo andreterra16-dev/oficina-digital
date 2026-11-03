@@ -188,6 +188,119 @@ src/
                GitHub flow (git-flow), o personagem em 3D (character-3d + three-stage)
                os objetos flutuantes (zdog-orbit) e o contador dos painéis de projeto (count-up)
 scripts/       compila src/ → arquivos publicados; scripts/depth gera os mapas de profundidade
+               e a camada do braço que acena
+docs/          documentação de referência (docs/3d-character.md)
+assets/        imagens do site; assets/depth tem os mapas de profundidade do personagem
+```
+
+**Ilustrações em pixel (`pixel-sprite`).** Cada peça da Bancada de IA tem um sprite 24×24
+desenhado em código (`src/data/pixel-sprites.ts`) com uma "caneta" mínima: retângulos, linhas,
+discos, polígonos e uma fonte 3×5. As cores vêm dos mesmos tokens do tema (Warm Forge / Cold
+Steel), então o sprite acompanha a troca de tema. Para ilustrar uma peça nova, basta adicionar
+um `sprite(...)` com o mesmo `id` da habilidade em `src/data/skills.ts`.
+
+**GitHub flow (`git-flow`).** O desenho é um único grafo descrito em dois eixos (tempo e
+"faixa"), e o mesmo desenho vira horizontal em telas largas e uma linha do tempo vertical no
+celular. Tudo no grafo carrega o passo em que aparece (`data-from`), então voltar um passo
+"desdesenha" sozinho. O texto de cada passo, em português e inglês, fica em
+`src/data/github-flow.ts`. A animação só roda enquanto está visível, para de vez quando a pessoa
+assume o controle e é substituída pelo grafo completo para quem prefere menos movimento.
+
+**Personagem em 3D (`character-3d`, Three.js).** Não existe um modelo 3D do André, só
+ilustrações. Então a imagem vira um *depth photo*: é aplicada numa malha subdividida, e cada
+vértice é empurrado para a frente conforme um mapa de profundidade (branco = perto). Inclinar
+a malha com o mouse move o corpo contra o fundo como um objeto real; o vertex shader adiciona
+uma respiração lenta e o fragment shader deriva uma normal do próprio mapa para iluminar o
+relevo com uma luz móvel. O `<pixel-reveal>` continua sendo a abertura (e o fallback): o
+componente só faz o *crossfade* para a cena viva depois que a abertura termina.
+
+- **Entra logo no começo.** A cena viva é o que o visitante deve ver se mexendo desde o início,
+  então ela carrega cedo: o módulo, a textura e o mapa de profundidade do herói são pré-carregados
+  no `<head>` (`modulepreload` + `preload`), a cena começa a subir antes do React montar a página,
+  e quando o runtime troca os elementos pelos finais, a cena já criada é *entregue* ao novo
+  elemento em vez de refeita. Ela só espera a sequência de boot terminar (`#boot-overlay`, ~1,6 s)
+  e então toca a própria entrada: a imagem se monta em blocos, já viva. O `<pixel-reveal>` slotado
+  é só o fallback: aparece se a cena demorar mais de 2,5 s depois do boot, e é tudo que vê quem tem
+  "reduzir movimento" ou não tem WebGL.
+- **Texturas leves.** A cena usa versões WebP de `assets/3d/` (a do herói tem ~75 KB, contra
+  2,6 MB do PNG original, que continua sendo o fallback). Se uma imagem de personagem mudar,
+  gere de novo o WebP e o mapa de profundidade.
+- **Responsivo.** O canvas acompanha o tamanho do elemento (ResizeObserver). Nos retratos
+  redondos a imagem *cobre* o círculo (`fit="cover"`) e a câmera avança alguns por cento
+  (`zoom`), para a malha inclinada nunca expor a borda como um corte reto.
+- **Carregamento sob demanda.** O Three.js (~540 KB, já com tree-shaking) vive em um módulo
+  próprio, `components/three-stage.js`, importado com `import()`. Quem tem "reduzir movimento"
+  ligado nunca baixa nada disso.
+- **Só renderiza visível.** O loop de render para fora da tela e com a aba em segundo plano.
+- **Mapas de profundidade.** Ficam em `assets/depth/` e saem de `scripts/depth/make-depth.py`
+  (segmentação clássica, sem modelo de IA: o corpo vira um "travesseiro" suavizado).
+  Só é preciso rodar de novo se a imagem de um personagem mudar:
+  `pip install pillow numpy scipy && python scripts/depth/make-depth.py`.
+
+**O aceno.** No retrato do contato, o antebraço e a mão são uma *camada separada*, recortada da
+imagem (`scripts/depth/make-arm.py`) com o fundo reconstruído por trás, e giram como corpo rígido
+em torno do cotovelo (`arm` e `wave` no `<character-3d>`). A primeira versão deformava a malha
+em volta do braço e a mão borrava; mover uma camada não reamostra os pixels, então a mão fica
+nítida. Só antebraço e mão giram: o cotovelo é uma dobradiça. A amplitude "respira".
+
+> A referência completa do 3D (pipeline, atributos, estados de carregamento, orçamento de
+> performance, como acrescentar um personagem e solução de problemas) está em
+> [docs/3d-character.md](docs/3d-character.md).
+
+**Projetos em destaque** · Salomão Select e o portal da Salomão Santos têm painéis próprios, com captura real do site no ar, o que cada um entrega e os números de engenharia (modelos de dados, migrações, rotas, ADRs, testes, releases) subindo quando entram na tela. Todos os números foram contados nos repositórios, e a página informa a data da contagem.
+- **Personagem em 3D** · o meu boneco (na abertura, no "Acabamento" e no contato) ganha profundidade de verdade: o corpo se destaca do fundo e acompanha o mouse, "respira" e recebe uma luz que se move. No contato ele também acena se despedindo. Em volta dele flutuam objetos em pseudo-3D (cubo, anel, hexágono, `</>` e pixels em voxel). Em quem prefere menos movimento, ou sem WebGL, fica a imagem estática de sempre.
+
+### Como eu versiono (e reviso o que a IA escreve)
+
+É o fluxo que a animação mostra. Quando agentes geram diffs enormes, o gargalo deixa de ser escrever e passa a ser revisar com segurança, então o fluxo troca volume por risco:
+
+- **Uma tarefa, um worktree.** Cada tarefa, minha ou de um agente, tem branch e `git worktree` próprios, o que permite vários agentes em paralelo sem colisão. Nenhum deles chega à `main`.
+- **Checkpoints viram história.** O agente comita à vontade; antes do PR eu leio cada hunk (`git add -p`) e reescrevo em commits de uma ideia só (`feat` / `fix` / `docs` / `chore`), com o trailer `Co-Authored-By` marcando o que foi IA.
+- **Revisão por risco, não por tamanho.** Primeiro o formato do diff (`--stat`, arquivos tocados, lockfile). Auth, migração, config e dependência nova levam leitura completa; o resto, testes e uma passada de olho.
+- **Máquina primeiro, olho depois.** `npm run verify` (typecheck estrito + build) e testes no hook e no CI, mais varredura de segredos. Se falha, o erro volta para o agente. Pacote novo só entra com o diff do lockfile revisado.
+- **Squash na `main`**: um commit por ideia, `main` linear e sempre publicável (ela alimenta o deploy no Netlify).
+- **Rede de segurança.** `git bisect run` acha o commit culpado, `git revert` desfaz sem reescrever história, o `reflog` recupera o que um agente apagou. Force push só como `--force-with-lease`, em branch própria.
+- **Repositório sem ruído**: `node_modules`, ferramentas de agente de IA e material de terceiros ficam no `.gitignore`; arquivos gerados dizem, no topo, de onde vieram.
+
+O padrão de commits dá para conferir no histórico deste repositório.
+
+## Contato
+
+- **E-mail:** [andre.terra16@gmail.com](mailto:andre.terra16@gmail.com)
+- **LinkedIn:** [linkedin.com/in/andré-ricco](https://www.linkedin.com/in/andr%C3%A9-ricco-1674b8283/)
+- **GitHub:** [@andreterra16-dev](https://github.com/andreterra16-dev)
+
+Tem um projeto de web, dados ou IA em mente? Sempre aberto a conversar.
+
+<br>
+
+---
+
+<details>
+<summary><b>Como este site foi construído</b> (clique para expandir)</summary>
+
+<br>
+
+Portfólio de página única. O código-fonte é TypeScript, 100% tipado em modo estrito, em `src/`.
+Um build (`npm run build`) compila essa fonte para o arquivo estático que o navegador carrega
+(`Portfolio Andre Ricco.dc.html`, com uma cópia dele em `index.html` para hospedagem estática).
+
+O site é bilíngue (português/inglês) e tem dois temas de cor — trocáveis ao vivo, sem recarregar
+a página, e lembrados na próxima visita.
+
+#### Estrutura
+
+```
+src/
+  data/        conteúdo do site, separado do design: projetos, habilidades, textos,
+               os passos do GitHub flow, os ícones do GitHub e as ilustrações em pixel
+  logic/       estado e comportamento da página (component.ts)
+  components/  pequenos elementos visuais próprios (cada um é um custom element):
+               revelação de imagem em pixels, cursor com rastro, chuva digital,
+               ilustração que se monta em pixels (pixel-sprite), a animação do
+               GitHub flow (git-flow), o personagem em 3D (character-3d + three-stage)
+               os objetos flutuantes (zdog-orbit) e o contador dos painéis de projeto (count-up)
+scripts/       compila src/ → arquivos publicados; scripts/depth gera os mapas de profundidade
 assets/        imagens do site; assets/depth tem os mapas de profundidade do personagem
 ```
 
