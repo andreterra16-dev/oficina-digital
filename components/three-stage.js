@@ -4228,6 +4228,9 @@ void main() {
 uniform sampler2D uDepth;
 uniform float uAmp;
 uniform float uTime;
+uniform float uAspect;
+uniform vec4 uWaveA; // pivot.xy, y0, y1
+uniform vec4 uWaveB; // xFull, xFade, amp, speed
 varying vec2 vUv;
 varying float vDepth;
 void main() {
@@ -4235,6 +4238,18 @@ void main() {
   float d = texture2D(uDepth, uv).r;
   vDepth = d;
   vec3 p = position;
+  // Waving: rotate the forearm and hand about the elbow. The weight ramps from
+  // 0 at the elbow to 1 at the wrist (so the upper arm stays put) and fades out
+  // toward the torso, which keeps the sleeve from being dragged along.
+  if (uWaveB.z > 0.0) {
+    float w = smoothstep(uWaveA.z, uWaveA.w, uv.y) * (1.0 - smoothstep(uWaveB.x, uWaveB.y, uv.x));
+    vec2 piv = vec2((uWaveA.x - 0.5) * uAspect, uWaveA.y - 0.5);
+    // A wave that breathes: strong swings with softer ones in between.
+    float ang = sin(uTime * uWaveB.w) * uWaveB.z * (0.72 + 0.28 * sin(uTime * 0.9)) * w;
+    vec2 o = p.xy - piv;
+    float c = cos(ang), sn = sin(ang);
+    p.xy = piv + vec2(c * o.x - sn * o.y, sn * o.x + c * o.y);
+  }
   // Breathing: the figure swells a hair toward the camera and rises with it.
   float b = sin(uTime * 1.45);
   p.z += d * (uAmp + 0.012 * b);
@@ -4261,7 +4276,7 @@ void main() {
   float band = smoothstep(0.07, 0.0, abs((vUv.x + (1.0 - vUv.y)) * 0.5 - (sweep * 1.5 - 0.25)));
   rgb += band * body * 0.09;
   gl_FragColor = vec4(rgb * c.a, c.a);
-}`;function Lc(i,t){return new Promise((e,n)=>{new Qi().load(i,s=>{s.generateMipmaps=t,s.minFilter=t?Qe:xe,s.magFilter=xe,e(s)},void 0,n)})}async function j0(i){let{canvas:t}=i,e=new aa({canvas:t,alpha:!0,antialias:!0,powerPreference:"low-power"});e.outputColorSpace=Jn,e.setPixelRatio(Math.min(window.devicePixelRatio||1,2)),e.setClearColor(0,0);let[n,s]=await Promise.all([Lc(i.image,!0),Lc(i.depth,!1)]),r=n.image,a=r.width/r.height,o=new Xi,c=new we(16,1,.1,20),l=new Xe(new Qn(a,1,80,Math.round(80/a)),new qe({uniforms:{uMap:{value:n},uDepth:{value:s},uAmp:{value:i.amp},uTime:{value:0},uLight:{value:[.3,.4]}},vertexShader:lm,fragmentShader:cm,transparent:!0,premultipliedAlpha:!0}));o.add(l);let u=[];t.addEventListener("webglcontextlost",g=>{g.preventDefault(),u.forEach(y=>y())});let m=l.material.uniforms,h=0,p=!1,x=0,M=0,f=0,d=0,b=0,R=0,T=3,w=()=>{let g=Math.max(1,t.clientWidth),y=Math.max(1,t.clientHeight);e.setSize(g,y,!1),c.aspect=g/y;let O=Math.tan(c.fov*Math.PI/360);T=Math.max(1/(2*O),a/(2*O*c.aspect))*1.02+i.amp*.5,c.position.set(0,0,T),c.updateProjectionMatrix()};w();let A=g=>{h=requestAnimationFrame(A);let y=Math.min(.05,(g-x)/1e3||.016);x=g,M+=y;let O=1-Math.exp(-y*5);c.position.z=T/(1+.05*(1-Math.pow(1-Math.min(1,M/1.8),3))),b+=(f-b)*O,R+=(d-R)*O;let P=i.sway;l.rotation.y=b*.17+Math.sin(M*.55)*.05*P,l.rotation.x=-R*.1+Math.cos(M*.4)*.022*P,l.position.y=Math.sin(M*.9)*.006*P,m.uTime.value=M,m.uLight.value=[b*.9+Math.sin(M*.35)*.35,.45-R*.6],e.render(o,c)};return{start(){p||(p=!0,x=performance.now(),h=requestAnimationFrame(A))},stop(){p=!1,cancelAnimationFrame(h)},setPointer(g,y){f=g,d=y},resize:w,onLost(g){u.push(g)},dispose(){p=!1,cancelAnimationFrame(h),l.geometry.dispose(),l.material.dispose(),n.dispose(),s.dispose(),e.dispose()}}}export{j0 as createStage};
+}`;function Lc(i,t){return new Promise((e,n)=>{new Qi().load(i,s=>{s.generateMipmaps=t,s.minFilter=t?Qe:xe,s.magFilter=xe,e(s)},void 0,n)})}async function j0(i){let{canvas:t}=i,e=new aa({canvas:t,alpha:!0,antialias:!0,powerPreference:"low-power"});e.outputColorSpace=Jn,e.setPixelRatio(Math.min(window.devicePixelRatio||1,2)),e.setClearColor(0,0);let[n,s]=await Promise.all([Lc(i.image,!0),Lc(i.depth,!1)]),r=n.image,a=r.width/r.height,o=new Xi,c=new we(16,1,.1,20),l=new Xe(new Qn(a,1,80,Math.round(80/a)),new qe({uniforms:{uMap:{value:n},uDepth:{value:s},uAmp:{value:i.amp},uTime:{value:0},uLight:{value:[.3,.4]},uAspect:{value:a},uWaveA:{value:i.wave?[...i.wave.pivot,i.wave.y0,i.wave.y1]:[0,0,0,0]},uWaveB:{value:i.wave?[i.wave.xFull,i.wave.xFade,i.wave.amp,i.wave.speed]:[0,0,0,0]}},vertexShader:lm,fragmentShader:cm,transparent:!0,premultipliedAlpha:!0}));o.add(l);let u=[];t.addEventListener("webglcontextlost",g=>{g.preventDefault(),u.forEach(y=>y())});let m=l.material.uniforms,h=0,p=!1,x=0,M=0,f=0,d=0,b=0,R=0,T=3,w=()=>{let g=Math.max(1,t.clientWidth),y=Math.max(1,t.clientHeight);e.setSize(g,y,!1),c.aspect=g/y;let O=Math.tan(c.fov*Math.PI/360);T=Math.max(1/(2*O),a/(2*O*c.aspect))*1.02+i.amp*.5,c.position.set(0,0,T),c.updateProjectionMatrix()};w();let A=g=>{h=requestAnimationFrame(A);let y=Math.min(.05,(g-x)/1e3||.016);x=g,M+=y;let O=1-Math.exp(-y*5);c.position.z=T/(1+.05*(1-Math.pow(1-Math.min(1,M/1.8),3))),b+=(f-b)*O,R+=(d-R)*O;let P=i.sway;l.rotation.y=b*.17+Math.sin(M*.55)*.05*P,l.rotation.x=-R*.1+Math.cos(M*.4)*.022*P,l.position.y=Math.sin(M*.9)*.006*P,m.uTime.value=M,m.uLight.value=[b*.9+Math.sin(M*.35)*.35,.45-R*.6],e.render(o,c)};return{start(){p||(p=!0,x=performance.now(),h=requestAnimationFrame(A))},stop(){p=!1,cancelAnimationFrame(h)},setPointer(g,y){f=g,d=y},resize:w,onLost(g){u.push(g)},dispose(){p=!1,cancelAnimationFrame(h),l.geometry.dispose(),l.material.dispose(),n.dispose(),s.dispose(),e.dispose()}}}export{j0 as createStage};
 /*! Bundled license information:
 
 three/build/three.core.js:

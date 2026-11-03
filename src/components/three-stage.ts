@@ -36,6 +36,10 @@ export interface StageOptions {
   amp: number;
   /** Idle sway strength; 1 = the default gentle motion. */
   sway: number;
+  /** Optional waving limb: the part of the image above `y0..y1` and left of
+   *  `xFull..xFade` (all in image UV, y up) swings about the pivot (the
+   *  elbow) — used for the contact portrait's goodbye wave. */
+  wave?: { pivot: [number, number]; y0: number; y1: number; xFull: number; xFade: number; amp: number; speed: number };
 }
 
 export interface Stage {
@@ -52,6 +56,9 @@ const VERT = /* glsl */ `
 uniform sampler2D uDepth;
 uniform float uAmp;
 uniform float uTime;
+uniform float uAspect;
+uniform vec4 uWaveA; // pivot.xy, y0, y1
+uniform vec4 uWaveB; // xFull, xFade, amp, speed
 varying vec2 vUv;
 varying float vDepth;
 void main() {
@@ -59,6 +66,18 @@ void main() {
   float d = texture2D(uDepth, uv).r;
   vDepth = d;
   vec3 p = position;
+  // Waving: rotate the forearm and hand about the elbow. The weight ramps from
+  // 0 at the elbow to 1 at the wrist (so the upper arm stays put) and fades out
+  // toward the torso, which keeps the sleeve from being dragged along.
+  if (uWaveB.z > 0.0) {
+    float w = smoothstep(uWaveA.z, uWaveA.w, uv.y) * (1.0 - smoothstep(uWaveB.x, uWaveB.y, uv.x));
+    vec2 piv = vec2((uWaveA.x - 0.5) * uAspect, uWaveA.y - 0.5);
+    // A wave that breathes: strong swings with softer ones in between.
+    float ang = sin(uTime * uWaveB.w) * uWaveB.z * (0.72 + 0.28 * sin(uTime * 0.9)) * w;
+    vec2 o = p.xy - piv;
+    float c = cos(ang), sn = sin(ang);
+    p.xy = piv + vec2(c * o.x - sn * o.y, sn * o.x + c * o.y);
+  }
   // Breathing: the figure swells a hair toward the camera and rises with it.
   float b = sin(uTime * 1.45);
   p.z += d * (uAmp + 0.012 * b);
@@ -126,6 +145,9 @@ export async function createStage(opts: StageOptions): Promise<Stage> {
         uAmp: { value: opts.amp },
         uTime: { value: 0 },
         uLight: { value: [0.3, 0.4] },
+        uAspect: { value: aspect },
+        uWaveA: { value: opts.wave ? [...opts.wave.pivot, opts.wave.y0, opts.wave.y1] : [0, 0, 0, 0] },
+        uWaveB: { value: opts.wave ? [opts.wave.xFull, opts.wave.xFade, opts.wave.amp, opts.wave.speed] : [0, 0, 0, 0] },
       },
       vertexShader: VERT,
       fragmentShader: FRAG,
