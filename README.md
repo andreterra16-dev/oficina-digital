@@ -45,6 +45,8 @@ O que uso no dia a dia entregando projetos de clientes (ver **Projetos** abaixo)
   <img src="https://img.shields.io/badge/Tailwind%20CSS-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS">
 </p>
 
+Nesta página em si, o 3D usa **Three.js** (cena WebGL do personagem) e **Zdog** (objetos flutuantes em pseudo-3D), ambos empacotados no build.
+
 | Frente | O que cobre |
 | --- | --- |
 | **Engenharia de IA** | Integrar modelos de linguagem (LLMs) a produtos reais: buscar a informação certa antes de responder (RAG), agentes que executam tarefas, automação de processos e avaliação da qualidade das respostas |
@@ -119,8 +121,9 @@ Detalhes de problema, resultado, desafios técnicos e estratégia de cada projet
 
 Duas partes da página são interativas de verdade, e valem o clique:
 
-- **Bancada de IA** · um terminal onde cada peça da minha stack (React, RAG, Docker, SQL…) é um comando. Clicar numa peça, ou só digitar o nome dela, monta no resultado uma ilustração em pixel art, pixel por pixel, ao lado de uma explicação de como uso aquilo na prática. Funciona com toque no celular e com teclado no desktop (`Tab` completa o nome).
+- **Bancada de IA** · um terminal onde cada peça da minha stack (React, RAG, Docker, SQL…) é um comando. Clicar numa peça, ou só digitar o nome dela, monta no centro do terminal uma ilustração em pixel art, pixel por pixel, com a explicação de como uso aquilo na prática logo abaixo. Funciona com toque no celular e com teclado no desktop (`Tab` completa o nome).
 - **GitHub flow** · uma animação que constrói, passo a passo, o caminho de uma mudança até a `main`: branch, commits, pull request, revisão, merge e limpeza. Mostra os comandos reais de cada passo e como as partes se conectam. Há play/pausa, e dá para pular direto para qualquer passo.
+- **Personagem em 3D** · o meu boneco (na abertura, no "Acabamento" e no contato) ganha profundidade de verdade: o corpo se destaca do fundo e acompanha o mouse, "respira" e recebe uma luz que se move. Em volta dele flutuam objetos em pseudo-3D (cubo, anel, hexágono, `</>` e pixels em voxel). Em quem prefere menos movimento, ou sem WebGL, fica a imagem estática de sempre.
 
 ### Como eu versiono
 
@@ -165,10 +168,11 @@ src/
   logic/       estado e comportamento da página (component.ts)
   components/  pequenos elementos visuais próprios (cada um é um custom element):
                revelação de imagem em pixels, cursor com rastro, chuva digital,
-               ilustração que se monta em pixels (pixel-sprite) e a animação do
-               GitHub flow (git-flow)
-scripts/       compila src/ → arquivos publicados
-assets/        imagens do site
+               ilustração que se monta em pixels (pixel-sprite), a animação do
+               GitHub flow (git-flow), o personagem em 3D (character-3d + three-stage)
+               e os objetos flutuantes (zdog-orbit)
+scripts/       compila src/ → arquivos publicados; scripts/depth gera os mapas de profundidade
+assets/        imagens do site; assets/depth tem os mapas de profundidade do personagem
 ```
 
 **Ilustrações em pixel (`pixel-sprite`).** Cada peça da Bancada de IA tem um sprite 24×24
@@ -184,10 +188,32 @@ celular. Tudo no grafo carrega o passo em que aparece (`data-from`), então volt
 `src/data/github-flow.ts`. A animação só roda enquanto está visível, para de vez quando a pessoa
 assume o controle e é substituída pelo grafo completo para quem prefere menos movimento.
 
+**Personagem em 3D (`character-3d`, Three.js).** Não existe um modelo 3D do André, só
+ilustrações. Então a imagem vira um *depth photo*: é aplicada numa malha subdividida, e cada
+vértice é empurrado para a frente conforme um mapa de profundidade (branco = perto). Inclinar
+a malha com o mouse move o corpo contra o fundo como um objeto real; o vertex shader adiciona
+uma respiração lenta e o fragment shader deriva uma normal do próprio mapa para iluminar o
+relevo com uma luz móvel. O `<pixel-reveal>` continua sendo a abertura (e o fallback): o
+componente só faz o *crossfade* para a cena viva depois que a abertura termina.
+
+- **Carregamento sob demanda.** O Three.js (~540 KB, já com tree-shaking) vive em um módulo
+  próprio, `components/three-stage.js`, importado com `import()` quando o personagem entra na
+  tela. Quem tem "reduzir movimento" ligado nunca baixa nada disso.
+- **Só renderiza visível.** O loop de render para fora da tela e com a aba em segundo plano.
+- **Mapas de profundidade.** Ficam em `assets/depth/` e saem de `scripts/depth/make-depth.py`
+  (segmentação clássica, sem modelo de IA: o corpo vira um "travesseiro" suavizado).
+  Só é preciso rodar de novo se a imagem de um personagem mudar:
+  `pip install pillow numpy scipy && python scripts/depth/make-depth.py`.
+
+**Objetos flutuantes (`zdog-orbit`, Zdog).** Formas planas em pseudo-3D que giram, oscilam e
+reagem ao mouse conforme a profundidade, nas cores do tema. Ficam ao lado do cartão do
+personagem, nunca por cima do rosto. O Zdog (~30 KB) vai direto no bundle do componente.
+
 > **Armadilha do runtime.** O `support.js` converte o DOM já renderizado do template em
 > elementos React. Um custom element que escreve filhos no próprio DOM acaba tendo esses filhos
-> "adotados" pelo React e quebra no próximo render (`removeChild`). Por isso `pixel-sprite` e
-> `git-flow` desenham dentro de um *shadow root*.
+> "adotados" pelo React e quebra no próximo render (`removeChild`). Por isso `pixel-sprite`,
+> `git-flow`, `character-3d` e `zdog-orbit` desenham dentro de um *shadow root* (o `<pixel-reveal>`
+> do `character-3d` entra por `<slot>`, sem ser tocado).
 
 **Rodando localmente**
 
