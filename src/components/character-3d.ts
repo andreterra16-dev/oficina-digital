@@ -1,4 +1,5 @@
-// <character-3d src="…png" texture="…webp" depth="…png" amp=".2" sway="1" fit="contain|cover" zoom="1.06" wave="…">
+// <character-3d src="…png" texture="…webp" depth="…png" amp=".2" sway="1" fit="contain|cover" zoom="1.06"
+//               arm="…webp" wave="pivotU,pivotV,amp,speed">
 //   <pixel-reveal …></pixel-reveal>   ← the fallback, slotted
 // </character-3d>
 //
@@ -179,7 +180,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;
             sway: parseFloat(this.getAttribute('sway') || '') || 1,
             fit: this.getAttribute('fit') === 'cover' ? 'cover' as const : 'contain' as const,
             zoom: parseFloat(this.getAttribute('zoom') || '') || 1.06,
-            ...this._wave(),
+            ...this._arm(),
           };
           sh = {
             owner: null,
@@ -208,12 +209,12 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:0;
       }
     }
 
-    /** `wave="pivotX,pivotY,y0,y1,xFull,xFade,amp,speed"` — see StageOptions.wave. */
-    private _wave(): { wave?: NonNullable<import('./three-stage').StageOptions['wave']> } {
-      const n = (this.getAttribute('wave') || '').split(',').map(parseFloat);
-      const [px, py, y0, y1, xFull, xFade, amp, speed] = n;
-      if (n.length !== 8 || n.some(Number.isNaN)) return {};
-      return { wave: { pivot: [px!, py!], y0: y0!, y1: y1!, xFull: xFull!, xFade: xFade!, amp: amp!, speed: speed! } };
+    /** `arm="layer.webp"` + `wave="pivotU,pivotV,amp,speed"` — see StageOptions.arm. */
+    private _arm(): { arm?: NonNullable<import('./three-stage').StageOptions['arm']> } {
+      const image = this.getAttribute('arm');
+      const [u, v, amp, speed] = (this.getAttribute('wave') || '').split(',').map(parseFloat);
+      if (!image || [u, v, amp, speed].some((n) => n === undefined || Number.isNaN(n))) return {};
+      return { arm: { image, pivot: [u!, v!], amp: amp!, speed: speed! } };
     }
 
     /** WebGL unavailable or lost: back to the slotted image, for good. */
