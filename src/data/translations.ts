@@ -1,7 +1,7 @@
 import type { I18nString } from '../types/domain';
 
 /** Every static UI string in the `.dc.html` template that isn't already
- *  data-driven (SKILLS/PRODUCT_TYPES/PROJECTS carry their own `I18nString`
+ *  data-driven (SKILLS/FLOW_STEPS/PROJECTS carry their own `I18nString`
  *  fields) — section labels, CTAs, modal chrome, footer. Keyed by section
  *  so a reader can find "where does this text live on the page" from the
  *  key alone; every key here has a matching `{{ t.<key> }}` in the
@@ -10,7 +10,7 @@ export const TRANSLATIONS: Record<string, I18nString> = {
   // header
   headerWordmark: { pt: 'oficina digital', en: 'digital workshop' },
   headerNavIa: { pt: '02 · Bancada de IA', en: '02 · AI Workbench' },
-  headerNavProject: { pt: '03 · Seu projeto', en: '03 · Your project' },
+  headerNavProject: { pt: '03 · GitHub flow', en: '03 · GitHub flow' },
   headerNavAcabamento: { pt: '04 · Acabamento', en: '04 · Finishing' },
   headerCta: { pt: 'Entrega', en: 'Delivery' },
   headerLangToggle: { pt: 'Mudar idioma', en: 'Switch language' },
@@ -48,7 +48,7 @@ export const TRANSLATIONS: Record<string, I18nString> = {
   workbenchTitle1: { pt: 'O ferramental de ', en: 'The tools of ' },
   workbenchTitle2: { pt: 'IA', en: 'AI' },
   workbenchTitle3: { pt: ', peça por peça', en: ', piece by piece' },
-  workbenchParagraph: { pt: 'O ramo de IA é a peça central da bancada, alimentado por uma base sólida de web e dados. Clique em qualquer nó para ver o que ele faz na prática.', en: 'The AI branch is the central piece of the workbench, powered by a solid base of web and data. Click on any node to see what it does in practice.' },
+  workbenchParagraph: { pt: 'O ramo de IA é a peça central da bancada, alimentado por uma base sólida de web e dados. Clique em qualquer peça e veja ela se montar em pixels, com o que ela faz na prática.', en: 'The AI branch is the central piece of the workbench, powered by a solid base of web and data. Click any piece and watch it assemble in pixels, along with what it does in practice.' },
   workbenchLegendIa: { pt: 'IA', en: 'AI' },
   workbenchAsideDomain: { pt: 'Domínio', en: 'Domain' },
   workbenchBranchDados: { pt: 'Dados & infra', en: 'Data & Infra' },
@@ -59,26 +59,34 @@ export const TRANSLATIONS: Record<string, I18nString> = {
   workbenchCard3Title: { pt: 'Entrega', en: 'Delivery' },
   workbenchCard3Desc: { pt: 'Do protótipo ao deploy: interface em Next.js, API em Node, dados em PostgreSQL, tudo containerizado com Docker.', en: 'From prototype to deploy: Next.js frontend, Node API, PostgreSQL data, all containerized with Docker.' },
   workbenchTerminalPlaceholder: { pt: 'ex.: react, docker…', en: 'e.g.: react, docker…' },
-  workbenchTerminalHint: { pt: 'digite o nome de uma peça · [TAB] completa · [CLIQUE] num nó também funciona', en: "type a piece's name · [TAB] completes · [CLICK] a node also works" },
-  workbenchTerminalNotFound: { pt: 'termo não encontrado — tente outro ou clique num nó', en: 'term not found — try another, or click a node' },
+  workbenchTerminalHint: { pt: 'digite o nome de uma peça · [TAB] completa · [CLIQUE] numa peça também funciona', en: "type a piece's name · [TAB] completes · [CLICK] a piece also works" },
+  workbenchTerminalNotFound: { pt: 'termo não encontrado — tente outro ou clique numa peça', en: 'term not found — try another, or click a piece' },
   workbenchTerminalFieldName: { pt: 'nome', en: 'name' },
   workbenchTerminalFieldMeaning: { pt: 'o que isso significa aqui', en: 'what this means here' },
+  workbenchPixelCaption: { pt: 'ilustração em pixels · 24×24', en: 'pixel illustration · 24×24' },
 
-  // "jogo do seu projeto" (projects) section
-  projectsStage: { pt: 'Etapa 03 · o jogo do seu projeto', en: "Stage 03 · your project's game" },
-  projectsTitle1: { pt: 'O jogo do ', en: "Your project's " },
-  projectsTitle2: { pt: 'seu projeto', en: 'game' },
-  projectsParagraph: { pt: 'Estes são os tipos de peça que saem desta oficina. Clique em um marco da esteira pra ver, em bom português, o que é, como fica na prática e pra quem costuma servir.', en: 'These are the types of work that leave this workshop. Click on a conveyor belt milestone to see, in plain English, what it is, how it works in practice, and who it serves.' },
-  projectsAsideLabel: { pt: 'Do simples ao sob medida', en: 'From simple to custom-made' },
-  projectsAsideValueLabel: { pt: 'tipos', en: 'types' },
-  projectsSchemeLabel: { pt: 'esteira · tipos de projeto que eu assino', en: 'conveyor · types of projects I deliver' },
-  projectPanelPractice: { pt: 'Como fica na prática', en: 'How it looks in practice' },
-  projectPanelIdeal: { pt: 'Pra quem é', en: 'Who it is for' },
-  projectPanelTimeframe: { pt: 'Prazo típico', en: 'Typical timeframe' },
-  projectPanelCta: { pt: 'Falar sobre este projeto', en: 'Discuss this project' },
+  // "github flow" (etapa 03) section — the animated flow itself renders its own
+  // copy from src/data/github-flow.ts; only the section chrome lives here.
+  projectsStage: { pt: 'Etapa 03 · GitHub flow', en: 'Stage 03 · GitHub flow' },
+  projectsTitle1: { pt: 'Nada chega na main', en: 'Nothing reaches main' },
+  projectsTitle2: { pt: 'sem passar pelo fluxo', en: 'without going through the flow' },
+  projectsParagraph: { pt: 'Trabalho com GitHub flow: uma branch por mudança, commits que contam o porquê, pull request revisado e merge só com a verificação verde. Aperte play ou escolha um passo para ver como as partes se conectam.', en: 'I work with GitHub flow: one branch per change, commits that tell why, a reviewed pull request and a merge only when the checks are green. Press play or pick a step to see how the parts connect.' },
+  projectsAsideLabel: { pt: 'Do commit ao deploy', en: 'From commit to deploy' },
+  projectsAsideValueLabel: { pt: 'passos', en: 'steps' },
+  versionCareLabel: { pt: 'Versionamento', en: 'Version control' },
+  versionCareTitle: { pt: 'O que eu cuido em cada commit', en: 'What I care about in every commit' },
+  versionLogTitle: { pt: 'histórico real deste repositório', en: 'real history of this repository' },
+  versionCare1Title: { pt: 'Commits que contam história', en: 'Commits that tell a story' },
+  versionCare1Desc: { pt: 'Padrão feat / fix / docs / chore e um motivo por commit. Dá para ler o log como um diário do projeto.', en: 'feat / fix / docs / chore convention and one reason per commit. The log reads like a project diary.' },
+  versionCare2Title: { pt: 'Main sempre publicável', en: 'main is always shippable' },
+  versionCare2Desc: { pt: 'Trabalho em branches curtas e só integro o que está pronto. A main alimenta o deploy no Netlify, então nunca pode ficar quebrada.', en: 'Short branches, and I only merge what is ready. main feeds the Netlify deploy, so it can never be broken.' },
+  versionCare3Title: { pt: 'Verificação antes do merge', en: 'Checks before the merge' },
+  versionCare3Desc: { pt: 'npm run verify roda o typecheck estrito e o build. Se não passar, não entra.', en: 'npm run verify runs the strict typecheck and the build. If it does not pass, it does not get in.' },
+  versionCare4Title: { pt: 'Repositório sem ruído', en: 'A repo without noise' },
+  versionCare4Desc: { pt: 'Dependências, arquivos gerados e material de terceiros ficam fora do versionamento (.gitignore), e o que é gerado diz de onde veio.', en: 'Dependencies, generated files and third-party material stay out of version control (.gitignore), and generated files say where they came from.' },
   projectsDeliveredLabel: { pt: 'Peças já entregues', en: 'Delivered pieces' },
   projectsDeliveredTitle: { pt: 'O que saiu desta oficina', en: 'What left this workshop' },
-  projectsDeliveredDesc: { pt: 'Projetos reais construídos com o mesmo processo das seis fases acima.', en: 'Real projects built with the same process as the phases above.' },
+  projectsDeliveredDesc: { pt: 'Projetos reais versionados com o mesmo fluxo de seis passos acima.', en: 'Real projects versioned with the same six-step flow above.' },
 
   // project card, "vaga aberta" teaser card & modal
   projectCardDetails: { pt: 'Ver detalhes', en: 'View details' },
