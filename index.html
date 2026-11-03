@@ -42,6 +42,8 @@
 <script src="./components/matrix-rain.js"></script>
 <script src="./components/pixel-sprite.js"></script>
 <script src="./components/git-flow.js"></script>
+<script src="./components/character-3d.js"></script>
+<script src="./components/zdog-orbit.js"></script>
 <style>
   :root {
     --color-bg-base: #1B1917;
@@ -137,6 +139,12 @@
   ascii-cursor { display: block; position: fixed; inset: 0; z-index: 70; pointer-events: none; }
   matrix-rain { display: block; position: absolute; inset: 0; z-index: 0; pointer-events: none; }
   pixel-sprite { display: block; position: relative; }
+  character-3d, zdog-orbit { display: block; }
+  /* Browser surfaces: the command list's scrollbar follows the palette. */
+  #ia-command-list { scrollbar-width: thin; scrollbar-color: rgba(var(--rgb-accent),.55) transparent; }
+  #ia-command-list::-webkit-scrollbar { width: 6px; }
+  #ia-command-list::-webkit-scrollbar-thumb { background: rgba(var(--rgb-accent),.5); border-radius: 3px; }
+  #ia-command-list::-webkit-scrollbar-track { background: transparent; }
   /* Cover-peel corner — project cards only. A folded dog-ear in the
      project's own accent color (`--fold-rgb`, set inline on `.project-cover`
      — the card's image wrapper — from `p.colorRgb`) that unfolds from the
@@ -301,14 +309,19 @@
        full row below. After a tap, pickSkill() centers the thumbnail in the
        viewport if it ended up off screen. */
     #ia-terminal-body { grid-template-columns: 1fr !important; gap: 22px !important; }
-    #ia-command-doc { grid-template-columns: 112px minmax(0, 1fr) !important; grid-template-rows: auto auto !important; grid-template-areas: "fig head" "meaning meaning" !important; border-left: none !important; padding-left: 0 !important; gap: 14px 16px !important; }
+    #ia-command-doc { text-align: left !important; justify-items: stretch !important; row-gap: 14px !important; grid-template-columns: 112px minmax(0, 1fr) !important; grid-template-rows: auto auto !important; grid-template-areas: "fig head" "meaning meaning" !important; border-left: none !important; padding-left: 0 !important; gap: 14px 16px !important; }
     #ia-command-list { max-height: none !important; padding-right: 0 !important; }
     #ia-command-list [data-cmd-row] { flex-direction: row !important; flex-wrap: wrap !important; gap: 8px !important; }
     #ia-command-list [data-skill] { width: auto !important; min-height: 44px; padding: 10px 14px !important; align-items: center !important; }
     #ia-command-list [data-skill][aria-pressed="false"] { background: rgba(var(--rgb-text-main),.05) !important; border-color: rgba(var(--rgb-text-main),.14) !important; }
     #ia-command-list [data-skill] > span:first-child { display: none !important; }
     #ia-command-list [data-skill] > span:last-child { font-size: 12.5px !important; color: var(--color-text-main) !important; }
+    #ia-sprite-fig { width: auto !important; }
     #ia-sprite-fig figcaption { display: none !important; }
+    #ia-command-doc [data-doc-fields] { align-items: flex-start !important; }
+    #ia-command-doc [data-doc-level] { justify-content: flex-start !important; }
+    #ia-command-doc p { margin-left: 0 !important; }
+    #hero-orbit { left: -14% !important; right: -14% !important; }
     #version-care { gap: 40px !important; margin-top: 56px !important; }
     #version-care [data-log-note] { display: none !important; }
     /* Header is `position:fixed` — every section's top padding assumes it
@@ -487,7 +500,13 @@
         <div style="position:relative;height:min(100%,720px);aspect-ratio:2 / 3;animation:idleFloat 9s ease-in-out infinite">
           <div style="position:absolute;inset:-1px;border-radius:26px;background:linear-gradient(150deg,rgba(var(--rgb-accent),.55),rgba(var(--rgb-support-amber),.18) 40%,rgba(var(--rgb-support-steel),.28));pointer-events:none"></div>
           <div style="position:relative;height:100%;width:100%;border-radius:25px;overflow:hidden;background:var(--color-bg-elevated);box-shadow:0 40px 90px -40px rgba(0,0,0,.9)">
-            <pixel-reveal src="./assets/hero-lousa.png" pixel-size="{{ heroPixelSize }}" duration="2.4" replay="false" style="width:100%;height:100%"></pixel-reveal>
+            <!-- <character-3d> keeps the pixel-reveal intro (slotted, and the
+                 whole story under reduced motion / without WebGL) and, once
+                 the intro has played, crossfades to a live three.js depth
+                 scene of the same image. See src/components/character-3d.ts. -->
+            <character-3d src="./assets/hero-lousa.png" depth="./assets/depth/hero-lousa.png" amp="0.12" sway="1" delay="3000" style="display:block;width:100%;height:100%">
+              <pixel-reveal src="./assets/hero-lousa.png" pixel-size="{{ heroPixelSize }}" duration="2.4" replay="false" style="width:100%;height:100%"></pixel-reveal>
+            </character-3d>
             <div style="position:absolute;inset:0;border-radius:25px;box-shadow:inset 0 0 0 1px rgba(var(--rgb-text-main),.16),inset 0 -90px 90px -60px rgba(var(--rgb-bg-base),.9);pointer-events:none"></div>
             <div style="position:absolute;left:0;right:0;top:0;height:34px;display:flex;align-items:center;gap:7px;padding:0 14px;background:linear-gradient(180deg,rgba(var(--rgb-bg-base),.82),transparent);font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;color:var(--color-text-main);pointer-events:none">
               <span style="width:5px;height:5px;border-radius:50%;background:var(--color-accent);animation:blink 2.2s ease-in-out infinite;flex:none"></span>{{ t.heroLiveLabel }}
@@ -498,6 +517,10 @@
           <span style="position:absolute;top:-9px;right:-9px;width:20px;height:20px;border-top:1px solid var(--color-accent);border-right:1px solid var(--color-accent);pointer-events:none"></span>
           <span style="position:absolute;bottom:-9px;left:-9px;width:20px;height:20px;border-bottom:1px solid var(--color-accent);border-left:1px solid var(--color-accent);pointer-events:none"></span>
           <span style="position:absolute;bottom:-9px;right:-9px;width:20px;height:20px;border-bottom:1px solid var(--color-accent);border-right:1px solid var(--color-accent);pointer-events:none"></span>
+          <!-- Flat pseudo-3D (Zdog) objects floating just outside the card — a
+               cube, ring, hexagon, </> glyph and voxel pixels. They sit beside
+               it, not on it, so nothing ever crosses André's face. -->
+          <zdog-orbit id="hero-orbit" style="position:absolute;left:-36%;right:-36%;top:-6%;bottom:-6%;z-index:3"></zdog-orbit>
           <div style="position:absolute;inset:-22px;border-radius:34px;border:1px dashed rgba(var(--rgb-support-steel),.35);pointer-events:none"></div>
           <div ref="{{ chip1 }}" style="position:absolute;top:10%;left:-30%;padding:9px 13px;border-radius:3px;border:1px solid rgba(var(--rgb-text-main),.14);background:var(--color-bg-card-aside);font-family:'JetBrains Mono',monospace;font-size:10.5px;white-space:nowrap;color:var(--color-support-amber);animation:bobSmall 5.2s ease-in-out infinite;will-change:transform">RAG · agentes</div>
           <div ref="{{ chip2 }}" style="position:absolute;top:47%;right:-28%;padding:9px 13px;border-radius:3px;border:1px solid rgba(var(--rgb-text-main),.14);background:var(--color-bg-card-aside);font-family:'JetBrains Mono',monospace;font-size:10.5px;white-space:nowrap;color:var(--color-text-main);animation:bobSmall 6.4s ease-in-out infinite;will-change:transform">Next.js · Node</div>
@@ -588,7 +611,7 @@
              mobile markup path — a real gain over the old canvas/accordion
              split, which needed two different DOMs for the same data. -->
         <div id="ia-terminal-body" style="position:relative;margin-top:24px;display:grid;grid-template-columns:230px 1fr;gap:30px">
-          <div id="ia-command-list" onClick="{{ pickSkill }}" style="display:flex;flex-direction:column;gap:18px;max-height:460px;overflow-y:auto;padding-right:8px">
+          <div id="ia-command-list" onClick="{{ pickSkill }}" style="display:flex;flex-direction:column;gap:18px;max-height:640px;overflow-y:auto;padding-right:8px">
             <sc-for list="{{ terminalCommands }}" as="grp" hint-placeholder-count="3">
               <div>
                 <div style="font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:{{ grp.color }};margin-bottom:8px;opacity:.85"># {{ grp.label }}</div>
@@ -609,23 +632,23 @@
                `<pixel-sprite>` re-assembles whenever `sprite` changes *or*
                `nonce` is bumped by a click, so tapping the word that is
                already selected replays it. -->
-          <div id="ia-command-doc" style="--sel-rgb:{{ sel.branchRgb }};border-left:1px dashed rgba(var(--sel-rgb),.5);padding-left:24px;min-width:0;transition:border-color .3s;display:grid;grid-template-columns:minmax(0,1fr) 216px;grid-template-rows:auto 1fr;grid-template-areas:'head fig' 'meaning fig';column-gap:30px;align-items:start">
-            <div style="grid-area:head;min-width:0">
+          <div id="ia-command-doc" style="--sel-rgb:{{ sel.branchRgb }};border-left:1px dashed rgba(var(--sel-rgb),.5);padding-left:24px;min-width:0;transition:border-color .3s;display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:'fig' 'head' 'meaning';justify-items:center;align-content:start;row-gap:6px;text-align:center">
+            <div style="grid-area:head;min-width:0;width:100%">
               <div style="font-size:10px;color:var(--color-text-dim)">$ man {{ sel.id }}</div>
-              <div style="margin-top:12px;display:flex;flex-direction:column;gap:7px;font-size:12px;line-height:1.4">
+              <div data-doc-fields="1" style="margin-top:12px;display:flex;flex-direction:column;align-items:center;gap:7px;font-size:12px;line-height:1.4">
                 <div><span style="color:var(--color-text-dim)">{{ t.workbenchTerminalFieldName }}&nbsp;&nbsp;</span><span style="color:var(--color-text-main);font-size:18px;font-weight:700">{{ sel.label }}</span></div>
                 <div><span style="color:var(--color-text-dim)">$&nbsp;</span><span style="color:{{ sel.branchColor }}">{{ sel.branchLabel }}</span></div>
-                <div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px;line-height:1.4"><span style="color:var(--color-text-dim)">{{ t.workbenchAsideDomain }}&nbsp;&nbsp;</span><span style="display:inline-block;color:{{ sel.branchColor }};letter-spacing:-.05em;line-height:1">{{ sel.levelBar }}</span><span style="color:var(--color-support-amber)">{{ sel.levelPct }} · {{ sel.levelLabel }}</span></div>
+                <div data-doc-level="1" style="display:flex;align-items:baseline;justify-content:center;flex-wrap:wrap;gap:0 8px;line-height:1.4"><span style="color:var(--color-text-dim)">{{ t.workbenchAsideDomain }}&nbsp;&nbsp;</span><span style="display:inline-block;color:{{ sel.branchColor }};letter-spacing:-.05em;line-height:1">{{ sel.levelBar }}</span><span style="color:var(--color-support-amber)">{{ sel.levelPct }} · {{ sel.levelLabel }}</span></div>
               </div>
             </div>
             <!-- The "o que significa no contexto do portfólio" part: not
                  just the technical definition, framed explicitly as why
                  this piece matters here. -->
-            <div style="grid-area:meaning;min-width:0">
+            <div style="grid-area:meaning;min-width:0;width:100%">
               <div style="margin-top:16px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-text-dim)">{{ t.workbenchTerminalFieldMeaning }}</div>
-              <p style="margin:8px 0 0;font-size:13px;line-height:1.75;color:var(--color-text-sec);text-wrap:pretty;max-width:58ch">{{ sel.desc }}</p>
+              <p style="margin:8px auto 0;font-size:13px;line-height:1.75;color:var(--color-text-sec);text-wrap:pretty;max-width:58ch">{{ sel.desc }}</p>
             </div>
-            <figure id="ia-sprite-fig" style="grid-area:fig;margin:0;min-width:0">
+            <figure id="ia-sprite-fig" style="grid-area:fig;margin:0;min-width:0;width:min(100%,360px)">
               <div style="font-size:10px;color:var(--color-text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">$ render {{ sel.id }}.px</div>
               <div style="position:relative;margin-top:12px;aspect-ratio:1 / 1;border:1px solid rgba(var(--sel-rgb),.55);background:radial-gradient(120% 100% at 50% 0%,rgba(var(--sel-rgb),.14),var(--color-bg-base) 70%)">
                 <pixel-sprite sprite="{{ sel.id }}" nonce="{{ skillNonce }}" label="{{ sel.label }}" style="position:absolute;inset:0;background-image:linear-gradient(rgba(var(--rgb-text-main),.035) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--rgb-text-main),.035) 1px,transparent 1px);background-size:4.1667% 4.1667%"></pixel-sprite>
@@ -848,7 +871,10 @@
           <div style="position:absolute;inset:-26px;border-radius:50%;border:1px dashed rgba(var(--rgb-support-amber),.45);animation:ringSpin 34s linear infinite;pointer-events:none"></div>
           <div style="position:absolute;inset:-14px;border-radius:50%;border:1px solid rgba(var(--rgb-accent),.35);border-top-color:var(--color-accent);border-right-color:transparent;animation:ringSpinBack 12s linear infinite;pointer-events:none"></div>
           <div style="position:absolute;inset:-6px;border-radius:50%;border:1px solid rgba(var(--rgb-text-main),.12);animation:ringPulse 4.5s ease-in-out infinite;pointer-events:none"></div>
-          <pixel-reveal src="./assets/andre-portrait.png" pixel-size="24" duration="2.2" replay="false" style="display:block;width:100%;height:100%;border-radius:50%;filter:drop-shadow(0 24px 44px rgba(0,0,0,.6))"></pixel-reveal>
+          <character-3d src="./assets/andre-portrait.png" depth="./assets/depth/andre-portrait.png" amp="0.16" sway="1" delay="2600" style="display:block;width:100%;height:100%;border-radius:50%;overflow:hidden;filter:drop-shadow(0 24px 44px rgba(0,0,0,.6))">
+            <pixel-reveal src="./assets/andre-portrait.png" pixel-size="24" duration="2.2" replay="false" style="display:block;width:100%;height:100%"></pixel-reveal>
+          </character-3d>
+          <zdog-orbit variant="ring" style="position:absolute;left:-16%;right:-16%;top:-16%;bottom:-16%;z-index:3"></zdog-orbit>
           <div style="position:absolute;right:2%;bottom:2%;padding:5px;border-radius:10px;background:var(--color-bg-base);border:2px solid var(--color-bg-panel);box-shadow:0 10px 24px -8px rgba(0,0,0,.7)">
             {{ logoMarkStamp }}
           </div>
@@ -910,7 +936,10 @@
           <div style="position:absolute;inset:-26px;border-radius:50%;border:1px dashed rgba(var(--rgb-support-amber),.45);animation:ringSpin 34s linear infinite;pointer-events:none"></div>
           <div style="position:absolute;inset:-14px;border-radius:50%;border:1px solid rgba(var(--rgb-accent),.35);border-top-color:var(--color-accent);border-right-color:transparent;animation:ringSpinBack 12s linear infinite;pointer-events:none"></div>
           <div style="position:absolute;inset:-6px;border-radius:50%;border:1px solid rgba(var(--rgb-text-main),.12);animation:ringPulse 4.5s ease-in-out infinite;pointer-events:none"></div>
-          <pixel-reveal src="./assets/andre-retrato-contato.png" pixel-size="24" duration="2.2" replay="false" style="display:block;width:100%;height:100%;border-radius:50%;filter:drop-shadow(0 24px 44px rgba(0,0,0,.6))"></pixel-reveal>
+          <character-3d src="./assets/andre-retrato-contato.png" depth="./assets/depth/andre-retrato-contato.png" amp="0.18" sway="1.15" delay="2600" style="display:block;width:100%;height:100%;border-radius:50%;overflow:hidden;filter:drop-shadow(0 24px 44px rgba(0,0,0,.6))">
+            <pixel-reveal src="./assets/andre-retrato-contato.png" pixel-size="24" duration="2.2" replay="false" style="display:block;width:100%;height:100%"></pixel-reveal>
+          </character-3d>
+          <zdog-orbit variant="ring" style="position:absolute;left:-16%;right:-16%;top:-16%;bottom:-16%;z-index:3"></zdog-orbit>
         </div>
       </div>
     </div>
