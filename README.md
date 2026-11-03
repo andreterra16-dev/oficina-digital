@@ -55,7 +55,7 @@ Nesta página em si, o 3D usa **Three.js** (cena WebGL do personagem) e **Zdog**
 
 ## Projetos
 
-Cinco projetos reais, entregues para clientes de consultoria e negócios próprios, do zero ao deploy.
+Seis projetos reais, entregues para clientes de consultoria e negócios próprios, do zero ao deploy. Os dois primeiros, **Salomão Select** e o **portal da Salomão Santos**, são os principais e ganham destaque na página, com o que cada um entrega e números de engenharia contados nos repositórios.
 
 <table>
 <tr>
@@ -73,9 +73,9 @@ Curadoria executiva de talentos internacionais. Funil de 7 fases com portões hu
 <td><b>02</b></td>
 <td>
 
-**[LP Institucional Salomão Santos](https://salomaosantosconsultec.com.br/)**
-Geração de leads e autoridade para consultoria nacional (franchising, valuation, M&A, compliance, tributário). Renderização client e server, formulário via EmailJS, SEO gerenciado.
-`React 18` `Vite` `Express (SSR)` `Framer Motion` `EmailJS`
+**[LP Institucional Salomão Santos](https://salomaosantosconsultec.com.br/)** · projeto principal
+Portal da consultoria (franquias, valuation, tributário, recrutamento e tecnologia) feito para passar autoridade e levar o visitante ao WhatsApp. Uma página HTML pré-renderizada por rota, textos em dicionários i18n, testes de navegador com axe e releases versionadas por tag (`vAAAA.MM.N`) publicadas por workflow.
+`React 18` `TypeScript` `Vite` `Playwright + axe` `Vitest`
 [repositório →](https://github.com/andreterra-lgtm/LP-SALOM-O-SANTOS)
 
 </td>
@@ -113,6 +113,17 @@ CMV e preço sugerido para sorveterias e negócios de sobremesa, recalculado ao 
 
 </td>
 </tr>
+<tr>
+<td><b>06</b></td>
+<td>
+
+**[Calculadora de Contratação](https://calculadoracontratacao.salomaosantosconsultec.com.br/)**
+Custo real de uma contratação CLT em dois perfis: o contratante informa o líquido desejado e a ferramenta encontra o bruto (INSS, IRRF 2026, vales) e soma encargos, benefícios e provisões, comparando Simples, Lucro Presumido e Lucro Real; o funcionário vê holerite e verbas na dispensa. O motor de cálculo roda numa função Netlify, fora do bundle publicado.
+`React 19` `TypeScript` `Vite` `Netlify Functions` `Vitest`
+Código privado — metodologia proprietária da Salomão Santos.
+
+</td>
+</tr>
 </table>
 
 Detalhes de problema, resultado, desafios técnicos e estratégia de cada projeto estão no próprio site, na seção **Peças já entregues**.
@@ -123,7 +134,8 @@ Duas partes da página são interativas de verdade, e valem o clique:
 
 - **Bancada de IA** · um terminal onde cada peça da minha stack (React, RAG, Docker, SQL…) é um comando. Clicar numa peça, ou só digitar o nome dela, monta no centro do terminal uma ilustração em pixel art, pixel por pixel, com a explicação de como uso aquilo na prática logo abaixo. Funciona com toque no celular e com teclado no desktop (`Tab` completa o nome).
 - **GitHub flow** · uma animação que constrói, passo a passo, o caminho de uma mudança até a `main`: branch, commits, pull request, revisão, merge e limpeza. Mostra os comandos reais de cada passo e como as partes se conectam. Há play/pausa, e dá para pular direto para qualquer passo.
-- **Personagem em 3D** · o meu boneco (na abertura, no "Acabamento" e no contato) ganha profundidade de verdade: o corpo se destaca do fundo e acompanha o mouse, "respira" e recebe uma luz que se move. Em volta dele flutuam objetos em pseudo-3D (cubo, anel, hexágono, `</>` e pixels em voxel). Em quem prefere menos movimento, ou sem WebGL, fica a imagem estática de sempre.
+- **Projetos em destaque** · Salomão Select e o portal da Salomão Santos têm painéis próprios, com captura real do site no ar, o que cada um entrega e os números de engenharia (modelos de dados, migrações, rotas, ADRs, testes, releases) subindo quando entram na tela. Todos os números foram contados nos repositórios, e a página informa a data da contagem.
+- **Personagem em 3D** · o meu boneco (na abertura, no "Acabamento" e no contato) ganha profundidade de verdade: o corpo se destaca do fundo e acompanha o mouse, "respira" e recebe uma luz que se move. No contato ele também acena se despedindo. Em volta dele flutuam objetos em pseudo-3D (cubo, anel, hexágono, `</>` e pixels em voxel). Em quem prefere menos movimento, ou sem WebGL, fica a imagem estática de sempre.
 
 ### Como eu versiono
 
@@ -170,7 +182,7 @@ src/
                revelação de imagem em pixels, cursor com rastro, chuva digital,
                ilustração que se monta em pixels (pixel-sprite), a animação do
                GitHub flow (git-flow), o personagem em 3D (character-3d + three-stage)
-               e os objetos flutuantes (zdog-orbit)
+               os objetos flutuantes (zdog-orbit) e o contador dos painéis de projeto (count-up)
 scripts/       compila src/ → arquivos publicados; scripts/depth gera os mapas de profundidade
 assets/        imagens do site; assets/depth tem os mapas de profundidade do personagem
 ```
@@ -204,6 +216,16 @@ componente só faz o *crossfade* para a cena viva depois que a abertura termina.
   (segmentação clássica, sem modelo de IA: o corpo vira um "travesseiro" suavizado).
   Só é preciso rodar de novo se a imagem de um personagem mudar:
   `pip install pillow numpy scipy && python scripts/depth/make-depth.py`.
+
+**O aceno.** No retrato do contato o vertex shader gira o antebraço e a mão em torno do cotovelo
+(`wave="…"` no `<character-3d>`): o peso vai de 0 no cotovelo a 1 no pulso, então o braço não
+se desprende do corpo, e some perto do tronco para não arrastar a manga. A amplitude "respira"
+(balanços fortes alternam com mais suaves).
+
+**Projetos em destaque (`src/data/featured.ts`).** Cada painel combina o projeto (em
+`projects.ts`) com as vantagens e os números de engenharia. Os números são contados nos
+repositórios (a data fica no próprio painel); refaça a contagem antes de mudar qualquer um.
+O `<count-up>` conta de zero quando o número entra na tela.
 
 **Objetos flutuantes (`zdog-orbit`, Zdog).** Formas planas em pseudo-3D que giram, oscilam e
 reagem ao mouse conforme a profundidade, nas cores do tema. Ficam ao lado do cartão do
